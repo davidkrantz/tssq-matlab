@@ -4,39 +4,58 @@ close all;
 clc;
 format long;
 rng(123);
-addpath('utils');
-addpath('chebfun-master');
+addpath('../utils');
+addpath('../chebfun-master');
 
 % Define parameters
-a = 0.5;   % Location where f_1 is small
+a = 1;   % Location where f_1 is small
 b_values = logspace(-5, -1, 10);
-delta = 1e-10;
+delta = 1e-0;
 m = 3;     % Order of singularity in g_1
-N = 8;
+N = 6;
 
 % Shift basis
-tshift = 0;
+tshift = a;
 
 % Define the nearly singular function g_1
 g1 = @(t, t0) 1 ./ abs(t - t0).^m;
 
 % Define f_1(t) to be small near t = a
 %f1 = @(t) (t - a).^4 + (t-a).^2; % Quadratic vanishing near a
-f1 = @(t) (t-a).^4 + (t-a).^2 + delta;
+f1 = @(t) (t-a).^4 + (t-a).^2 - delta;
 %f1 = @(t) (t).^4 + (t).^2 + 1e-8;
 frand = randnfun(2.8);
 %f1 = @(t) (t - a).^4 + (t-a).^2 + frand(t);
-%f1 = @(t) (t - a).^4.*frand(t) + (t-a).^2.*frand(t) + 1e-10;
+%f1 = @(t) (t - a).^4.*frand(t) + (t-a).^2.*frand(t) + 1e-10*frand(t);
 %f1 = @(t) 1e-1*ones(size(t));
 
 % Sample points for interpolation
-xj = lgwt(N,-1,1);
-%xj = lgwt(N,vpa(-1),vpa(1));
+%xj = lgwt(N,-1,1);
+xj = lgwt(N,vpa(-1),vpa(1));
 fj = f1(xj);
 
 % Compute monomial expansion coefficients (solve Vandermonde system)
 V = fliplr(vander(xj-tshift));
 c = V \ fj
+
+% syms t;
+% f_sym = (t - a)^4 + (t-a)^2 + 1e-10; % Example function
+% c_exact = zeros(N,1);
+% for k = 0:N-1
+%     dfk = diff(f_sym, t, k);
+%     h = 1e-6;
+%     for j = 2:k
+%         dfk = (f1(a + h) - 2*f1(a) + f1(a - h)) / h^2;
+%     end
+%     c_exact(k+1) = double(subs(dfk, t, a)) / factorial(k);
+% end
+% c_exact
+% c_exact(1)
+% c = c_exact;
+
+%c(1) = f1(a);
+
+%%
 
 %c(idx) = 0;
 %c = 0*c;
@@ -44,6 +63,7 @@ c = V \ fj
 
 % Plot error vs. b for different values
 tt = linspace(-1,1,1000);
+M = length(b_values);
 I1_refs = zeros(size(b_values));
 I1_approxs = zeros(size(b_values));
 Ik_values = zeros(N,length(b_values));
@@ -127,13 +147,13 @@ title('Error in interpolation');
 
 % Plot Ik values
 figure;
-for i = 1:N
+for i = 1:M
     semilogy(1:N,abs(Ik_values(:,i)),'x--');
     hold on;
 end
 grid on;
 leg = {};
-for i = 1:N
+for i = 1:M
     leg{i} = num2str(b_values(i));
 end
 legend(leg);
@@ -145,7 +165,7 @@ legend('|Ik|','|ck|');
 
 % Plot tmp vec
 figure;
-for i = 1:N
+for i = 1:M
     plot(1:N,c.*Ik_values(:,i),'x--');
     hold on;
 end
