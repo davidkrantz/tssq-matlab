@@ -1,5 +1,5 @@
 function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
-    sigma,r,delta,a,bv,n,use_vpa,corr_coeff_exact,corr_coeff_interp_sig,...
+    sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,corr_coeff_exact,corr_coeff_interp_sig,...
     solve_nonshifted,solve_shifted,use_bjorck_pereyra)
 % TEST_FLAT_PANEL_BASIS_CORR compares non-shifted and shifted monomial
 %   basis functions to compute
@@ -21,10 +21,11 @@ function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
 %   a                    - real part of singularity location t0
 %   bv                   - vector of imaginary parts of singularities t0 = a + ib
 %   n                    - number of Gauss-Legendre nodes (basis function order)
-%   use_vpa              - whether to use vpa to compute basis integrals Pkm and Qkm
+%   use_vpa              - string, 'none'/'all'/'init' indicating whether to use vpa to compute basis integrals Pkm and Qkm
+%   no_hp_switch         - boolean, switch to disable half plane switch for I1(1)
 %   corr_coeff_exact     - if true, correct first basis coeff in shifted case with exact f(a)
 %   corr_coeff_interp_sig- if true, correct first coeff using interpolated sigma(a)
-%   solve_nonshifted      - string, 'dp'/'qp' for double/quad precision solve
+%   solve_nonshifted     - string, 'dp'/'qp' for double/quad precision solve
 %   solve_shifted        - string, 'dp'/'mp'/'qp' for double/mixed/quad precision solve
 %   use_bjorck_pereyra   - boolean, use Bjorck-Pereyra method to solve Vandermonde
 %
@@ -38,6 +39,9 @@ function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
 %   irefv     - reference integral values computed via adaptive quadrature
 %
 % AUTHOR: David Krantz (davkra@kth.se) 2025-04-10
+%
+% Based on an idea by Alex Barnett. Some code has been taken from the 
+% GitHub repository https://github.com/ludvigak/linequad
 
 if nargin==0, test_corrections; return; end
 
@@ -59,7 +63,7 @@ wbary = bclag_interp_weights(tj); % barycentric Lagrange interpolation wts
 
 sh = a; % shift
 
-% basis coefficients, non-shifted, i.e. % c_k coeffs of f
+% basis coefficients, non-shifted, i.e. c_k coeffs of f
 if strcmp(solve_nonshifted,'qp')
     if use_bjorck_pereyra
         c = dvand(tjqp,fjqp);
@@ -139,12 +143,12 @@ for i = 1:M
     irefv(i) = I3e;
 
     % basis integrals
-    if use_vpa
-        [p1, p3, p5] = rsqrt_pow_integrals(vpa(t0), n); % recurrences
-        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(vpa(t0), n); % w shift
+    if strcmp(use_vpa,'none')
+        [p1, p3, p5] = rsqrt_pow_integrals(t0, n); % recurrences
+        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0, n, no_hp_switch); % w shift
     else
-        [p1, p3, p5] = rsqrt_pow_integrals(t0, n);
-        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0, n);
+        [p1, p3, p5] = rsqrt_pow_integrals(vpa(t0), n); % use vpa for all terms
+        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(vpa(t0), n, no_hp_switch, use_vpa);
     end
     p3mat(:,i) = p3;
     p3shmat(:,i) = p3sh;
@@ -176,39 +180,42 @@ end
 end
 
 function test_corrections
-test = 1; % which test to run
+
+test_no = 1; % which test to run
 
 savefig = 0; % saves figures to folder images
 
-use_vpa = 1; % compute recurrences using vpa in digits(32)
+use_vpa = 'none'; % compute recurrences using vpa in digits(32)
+no_hp_switch = false; % disables half plane switch for I1(1)
 corr_coeff_exact = 0; % correct first poly coeff by exact value
 corr_coeff_interp_sig = 1; % correct using interp of layer dens
 solve_nonshifted = 'dp'; % solve non-shifted Vandermonde system in dp/qp
 solve_shifted = 'dp'; % solve shifted Vandermonde system in dp/mp/qp
 use_bjorck_pereyra = 1; % or solve Vandermonde systems using "\"
 
-if test == 1
-    a = 0.23; % real of root
-    bv = logspace(-5,0,20)'; % imag of root, "distance" to panel
-    delta = 0; % offset 1e-3
-    sigma = @(t) sin(t+1); % artifical layer density function
-    r = 2; % vanishing rate
-    n = 16; % nodes
-elseif test == 2
-    a = -0.63;
-    bv = -logspace(-5,0,20)';
-    delta = 1e-3;
-    sigma = @(t) sin(2*t+1)-3*cos(t);
-    r = 3;
-    n = 22;
-else
-    error('test does not exist');
+switch test_no
+    case 1
+        a = 0.23; % real of root
+        bv = logspace(-5,0,20)'; % imag of root, "distance" to panel
+        delta = 0; % offset
+        sigma = @(t) sin(t+1); % artifical layer density function
+        r = 2; % vanishing rate
+        n = 16; % nodes
+    case 2
+        a = -0.63;
+        bv = -logspace(-5,0,20)';
+        delta = 1e-3;
+        sigma = @(t) sin(2*t+1)-3*cos(t);
+        r = 3;
+        n = 22;
+    otherwise
+        error('test does not exist');
 end
 
 % run test
 [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
-    sigma,r,delta,a,bv,n,use_vpa,corr_coeff_exact,corr_coeff_interp_sig,...
-    solve_nonshifted,solve_shifted,use_bjorck_pereyra);
+    sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,corr_coeff_exact,...
+    corr_coeff_interp_sig,solve_nonshifted,solve_shifted,use_bjorck_pereyra);
 
 % prepare plots
 M = numel(bv);
@@ -229,7 +236,7 @@ grid on;
 legend('non-shifted','shifted','O(1/b^2)');
 xlabel('b');
 ylabel('rel err');
-title(['use vpa=' num2str(use_vpa) ', corr coeff ex=' num2str(corr_coeff_exact), ', corr coeff interp=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
+title(['use vpa=' use_vpa ', fix Q_1^1=' num2str(~no_hp_switch), ', corr coeff interp=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
 
 figure;
 loglog(abs(bv),irefv,'.');
@@ -307,7 +314,7 @@ alignfigs;
 
 if savefig
     disp('saving figures...');
-    exportgraphics(figure(1),['matlab/images/err_vpa' num2str(use_vpa) '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
+    exportgraphics(figure(1),['matlab/images/err_vpa_' use_vpa '_fix_init' num2str(~no_hp_switch) '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
     exportgraphics(figure(2),['matlab/images/ivalref_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
     exportgraphics(figure(3),['matlab/images/interval_tarpts_a' num2str(a), '.pdf'],'Resolution',400);
     exportgraphics(figure(4),['matlab/images/numerator_delta' num2str(delta) '_a' num2str(a), '.pdf'],'Resolution',400);

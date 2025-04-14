@@ -1,5 +1,5 @@
-function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N)
-% rsqrt_pow_integrals(z,N)
+function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N,varargin)
+% rsqrt_pow_integrals_shift(z,N)
 % Recursively compute values of shifted integrals
 % Ip(k) = \int_{-1}^{1} (t-a)^{k-1}/|t-z|^p dt
 % for k=0,...,N-1 and z=a+bi not in the interval [-1,1]
@@ -12,8 +12,26 @@ function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N)
 % Based on recursions by Anna-Karin Tornberg & Katarina Gustavsson
 % Journal of Computational Physics 215 (2006) 172–196
 
+if nargin > 2
+    NO_HP_SWITCH = varargin{1}; % disables half plane switch for I1(1)
+elseif nargin > 3
+    use_vpa = varargin{2};
+elseif isa(z, 'sym')
+    use_vpa = 'all';
+    NO_HP_SWITCH = true;
+else
+    use_vpa = 'none';
+    NO_HP_SWITCH = false;
+end
+
 % Test switch to disable power series eval
 NO_POWER_SERIES = false;
+
+% Disable all tricks if called with VPA argument
+if isa(z, 'sym')
+    NO_POWER_SERIES = true;
+    NO_HP_SWITCH = true;
+end
 
 % Setup variables
 a = real(z);
@@ -25,16 +43,40 @@ u2 = sqrt(t2^2 + b^2);
 
 % Compute I1
 I1 = zeros(N,1);
-% First integral is more stable in left half plane
-if a<0
-    I1(1) = log(t2+u2)-log(t1+u1);
+if NO_HP_SWITCH
+    % Vanilla expression
+    I1(1) = log(1-a+u2)-log(-1-a+u1);    
 else    
-    % Swap
-    I1(1) = log(-t1+u1)-log(-t2+u2);        
+    % Evaluate after substitution zr -> -|zr|
+    arg2 = 1+abs(a) + sqrt((1+abs(a))^2 + b^2);          
+    in_rhomb = 4*abs(b) < 1-abs(a);    
+    if ~in_rhomb || NO_POWER_SERIES
+        arg1 = -1+abs(a) + sqrt((-1+abs(a))^2 + b^2);        
+    else
+        % Series evaluation needed inside 
+        % rhombus [-1, i/4, 1, -i/4, -1].
+        % Here arg1 has cancellation due to structure
+        % -x + sqrt(x^2+b^2)
+        Ns = 11;
+        coeffs = coeffs_I1(Ns);
+        arg1 = (1-abs(a))*eval_series(coeffs, 1-abs(a), b, Ns);    
+    end   
+    I1(1) = log(arg2)-log(arg1);
 end
+
+% compute only I1(1) in quadruple precision
+if isa(z, 'sym') && strcmp(use_vpa,'init')
+    b = double(b);
+    t1 = double(t1);
+    t2 = double(t2);
+    u1 = double(u1);
+    u2 = double(u2);
+end
+
 if N>1
     I1(2) = u2-u1;    
 end
+
 t1nm1 = 1; % t^(n-1)
 t2nm1 = 1; % t^(n-1)
 for n=2:N-1
