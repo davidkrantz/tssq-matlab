@@ -1,12 +1,12 @@
-function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
-    sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,corr_coeff_exact,corr_coeff_interp_sig,...
-    solve_nonshifted,solve_shifted,use_bjorck_pereyra)
+function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_corr(...
+    m,sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,adj_method,corr_coeff_exact,corr_coeff_interp_sig,...
+    solve_nonshifted,solve_shifted,use_bjorck_pereyra,errest_alt)
 % TEST_FLAT_PANEL_BASIS_CORR compares non-shifted and shifted monomial
 %   basis functions to compute
 %   
-%   I^3(t_0) = \int_{-1}^{1} \frac{f(t)}{|t-t_0|^3} dt
+%   I^m(t_0) = \int_{-1}^{1} \frac{f(t)}{|t-t_0|^m} dt, m=1,3,5
 %
-% [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
+% [errv,errshv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_corr(...
 %   sigma,r,delta,a,bv,n,use_vpa,corr_coeff_exact,corr_coeff_interp_sig,...
 %   solve_shifted,use_bjorck_pereyra) returns the relative error of the two
 %   basis choices as well as the corresponding basis coefficients and basis
@@ -15,6 +15,7 @@ function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
 % Without arguments runs test with both corrections active
 %
 % INPUTS:
+%   m                    - power of singularity 1/r^m
 %   sigma                - function handle for the layer density
 %   r                    - vanishing order of h(t) at t = a
 %   delta                - small offset for location of vanishing, h(t) = t - a + delta
@@ -23,27 +24,29 @@ function [errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
 %   n                    - number of Gauss-Legendre nodes (basis function order)
 %   use_vpa              - string, 'none'/'all'/'init' indicating whether to use vpa to compute basis integrals Pkm and Qkm
 %   no_hp_switch         - boolean, switch to disable half plane switch for I1(1)
+%   adj_method           - if true, solves non-shifted using adjoint method
 %   corr_coeff_exact     - if true, correct first basis coeff in shifted case with exact f(a)
 %   corr_coeff_interp_sig- if true, correct first coeff using interpolated sigma(a)
 %   solve_nonshifted     - string, 'dp'/'qp' for double/quad precision solve
 %   solve_shifted        - string, 'dp'/'mp'/'qp' for double/mixed/quad precision solve
 %   use_bjorck_pereyra   - boolean, use Bjorck-Pereyra method to solve Vandermonde
+%   errest_alt           - integer determines how to est cond number of sum
 %
 % OUTPUTS:
 %   errv      - relative error in non-shifted basis evaluation for each b
 %   errshv    - relative error in shifted basis evaluation for each b
 %   c         - monomial basis coefficients (non-shifted)
 %   d         - monomial basis coefficients (shifted)
-%   p3mat     - matrix of integrals P_k^3 for non-shifted basis
-%   p3shmat   - matrix of integrals Q_k^3 for shifted basis
+%   pmat     - matrix of integrals P_k^m for non-shifted basis
+%   pshmat   - matrix of integrals Q_k^m for shifted basis
 %   irefv     - reference integral values computed via adaptive quadrature
 %
-% AUTHOR: David Krantz (davkra@kth.se) 2025-04-10
+% AUTHOR: David Krantz (davkra@kth.se), April 2025
 %
 % Based on an idea by Alex Barnett. Some code has been taken from the 
 % GitHub repository https://github.com/ludvigak/linequad
 
-if nargin==0, test_corrections; return; end
+if nargin == 0, test_corrections; return; end
 
 % numerator
 h = @(t) t-a+delta; % function small at t=a
@@ -110,7 +113,7 @@ end
 % d = taylor_from_monomial(c,sh); % shifted coeffs from non-shifted coeffs c_k
 % correct first coefficient in shifted basis
 if corr_coeff_exact
-    d(1) = f(sh); % try repair d(1) ! -> works (up to p3sh err), shows the culprit
+    d(1) = f(sh); % correct d(1) ! -> works (up to basis int err)
 end
 if corr_coeff_interp_sig
     sigma_interp = bclag_interp(sj,tj,wbary,sh); % barycentric Lagrange interp of layer dens at t=a
@@ -124,23 +127,24 @@ end
 M = numel(bv);
 irefv = zeros(M,1);
 errv = zeros(M,1);
+errestv = zeros(M,1);
 errshv = zeros(M,1);
-p3mat = zeros(n,M);
-p3shmat = zeros(n,M);
+pmat = zeros(n,M);
+pshmat = zeros(n,M);
 for i = 1:M
     b = bv(i);
     t0 = a + 1i*b; % root in t
 
     R = @(t) abs(t-t0); % dist func
-    integrand3 = @(t) f(t)./R(t).^3;
+    integrand = @(t) f(t)./R(t).^m;
     if abs(a) < 1
-        I3e1 = integral(integrand3, -1, a, 'reltol', 0, 'abstol', 0);
-        I3e2 = integral(integrand3, a, 1, 'reltol', 0, 'abstol', 0);
-        I3e = I3e1+I3e2;
+        Ie1 = integral(integrand, -1, a, 'reltol', 0, 'abstol', 0);
+        Ie2 = integral(integrand, a, 1, 'reltol', 0, 'abstol', 0);
+        Ie = Ie1+Ie2;
     else
-        I3e = integral(integrand3, -1, 1, 'reltol', 0, 'abstol', 0);
+        Ie = integral(integrand, -1, 1, 'reltol', 0, 'abstol', 0);
     end
-    irefv(i) = I3e;
+    irefv(i) = Ie;
 
     % basis integrals
     if strcmp(use_vpa,'none')
@@ -150,26 +154,75 @@ for i = 1:M
         [p1, p3, p5] = rsqrt_pow_integrals(vpa(t0), n); % use vpa for all terms
         [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(vpa(t0), n, no_hp_switch, use_vpa);
     end
-    p3mat(:,i) = p3;
-    p3shmat(:,i) = p3sh;
+    if m == 1
+        p = p1;
+        psh = p1sh;
+    elseif m == 3
+        p = p3;
+        psh = p3sh;
+    elseif m == 5
+        p = p5;
+        psh = p5sh;
+    else
+        error('invalid value m');
+    end
+    pmat(:,i) = p;
+    pshmat(:,i) = psh;
     
-    % plain non-adj method, non-shifted
-    I3 = sum(c.*p3);
-    errv(i) = abs((I3-I3e)/I3e);
+    % non-shifted
+    if adj_method
+        % adj method
+        if use_bjorck_pereyra
+            lam = pvand(tj,p);
+        else
+            lam = V'\p;
+        end
+        I = sum(lam.*fj);
+    else
+        % plain non-adj method
+        I = sum(c.*p);
+    end
+    errv(i) = abs((I-Ie)/Ie);
 
     % plain non-adj method, shifted
-    I3sh = sum(d.*p3sh);
-    errshv(i) = abs((I3sh-I3e)/I3e);
+    Ish = sum(d.*psh);
+    errshv(i) = abs((Ish-Ie)/Ie);
+
+    % estimate cancellation error estimate using adj method vectors
+    if ~adj_method
+        if use_bjorck_pereyra
+            lam = pvand(tj,p);
+        else
+            lam = V'\p;
+        end
+    end
+    adjv = lam.*fj;
+    
+    % Ksum: condition number of the summation operator
+    if errest_alt == 1
+        % standard
+        kappasum = sum(abs(adjv))/abs(I);
+    elseif errest_alt == 2
+        % upper bound on summation terms
+        kappasum = (max(abs(adjv))*n)/abs(I);
+    elseif errest_alt == 3
+        % average over k random samples
+        k = 2;
+        rind = randi(n,k,1);
+        kappasum = (n/k)*sum(abs(adjv(rind)))/abs(I);
+    end
+    % final cancellation error estimate
+    errestv(i) = kappasum*eps*n;
 
     % print vectors
     if i == 1
-        Pkm = p3;
+        Pkm = p;
         c_Pkm = c.*Pkm;
         sum_c_Pkm = nan*ones(numel(c_Pkm),1);
         sum_c_Pkm(1) = sum(c_Pkm);
         table(c,Pkm,c_Pkm,sum_c_Pkm)
 
-        Qkm = p3sh;
+        Qkm = psh;
         d_Qkm = d.*Qkm;
         sum_d_Qkm = nan*ones(numel(d_Qkm),1);
         sum_d_Qkm(1) = sum(d_Qkm);
@@ -183,15 +236,18 @@ function test_corrections
 
 test_no = 1; % which test to run
 
-savefig = 0; % saves figures to folder images
+savefig = 0; % saves figures to folder matlab/images
 
+m = 3; % power of singularity 1/r^m
 use_vpa = 'none'; % compute recurrences using vpa in digits(32)
-no_hp_switch = false; % disables half plane switch for I1(1)
+no_hp_switch = 0; % disables half plane switch for I1(1)
+adj_method = 1; % solve non-shifted using adjoint method
 corr_coeff_exact = 0; % correct first poly coeff by exact value
 corr_coeff_interp_sig = 1; % correct using interp of layer dens
 solve_nonshifted = 'dp'; % solve non-shifted Vandermonde system in dp/qp
 solve_shifted = 'dp'; % solve shifted Vandermonde system in dp/mp/qp
 use_bjorck_pereyra = 1; % or solve Vandermonde systems using "\"
+errest_alt = 1; % which way to estimate condition number of sum
 
 switch test_no
     case 1
@@ -213,9 +269,10 @@ switch test_no
 end
 
 % run test
-[errv,errshv,c,d,p3mat,p3shmat,irefv] = test_flat_panel_basis_corr(...
-    sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,corr_coeff_exact,...
-    corr_coeff_interp_sig,solve_nonshifted,solve_shifted,use_bjorck_pereyra);
+[errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_corr(...
+    m,sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,adj_method,...
+    corr_coeff_exact,corr_coeff_interp_sig,solve_nonshifted,...
+    solve_shifted,use_bjorck_pereyra,errest_alt);
 
 % prepare plots
 M = numel(bv);
@@ -224,26 +281,27 @@ h = @(t) t-a+delta;
 f = @(t) sigma(t).*h(t).^r;
 fj = f(tj);
 
-% Plots
+% plots
 close all;
 
 figure;
 loglog(abs(bv),errv,'.');
 hold on;
 loglog(abs(bv),errshv,'o');
-loglog(abs(bv),1e-16*1./abs(bv).^2,'k');
+loglog(abs(bv),errestv,'mx-');
+loglog(abs(bv),1e-16*1./abs(bv).^2);
 grid on;
-legend('non-shifted','shifted','O(1/b^2)');
+legend('non-shifted','shifted',['errest (type=' num2str(errest_alt) ')'],'O(1/b^2)');
 xlabel('b');
 ylabel('rel err');
-title(['use vpa=' use_vpa ', fix Q_1^1=' num2str(~no_hp_switch), ', corr coeff interp=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
+title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa ', fix Q_1^1=' num2str(~no_hp_switch), ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
 
 figure;
 loglog(abs(bv),irefv,'.');
 grid on;
 xlabel('b');
 ylabel('ref intval, I');
-title(['delta=' num2str(delta)]);
+title(['m=' num2str(m) ', delta=' num2str(delta)]);
 
 figure;
 plot([-1,1],[0,0],'k');
@@ -271,26 +329,26 @@ grid on;
 title(['delta=' num2str(delta)]);
 
 figure;
-semilogy(1:n,abs(p3mat),'.--');
+semilogy(1:n,abs(pmat),'.--');
 grid on;
 xlim([1,n]);
 xlabel('k');
-ylabel('|Pk3|');
+ylabel('|Pkm|');
 bleg = cell(M,1);
 for i = 1:M
     bleg{i} = ['b=' num2str(bv(i))];
 end
 legend(bleg,'location','northoutside','NumColumns',3);
-title(['a=' num2str(a)]);
+title(['m=' num2str(m) ', a=' num2str(a)]);
 
 figure;
-semilogy(1:n,abs(p3shmat),'o--');
+semilogy(1:n,abs(pshmat),'o--');
 grid on;
 xlim([1,n]);
 xlabel('k');
-ylabel('|Qk3|');
+ylabel('|Qkm|');
 legend(bleg,'location','northoutside','NumColumns',3);
-title(['a=' num2str(a)]);
+title(['m=' num2str(m) ', a=' num2str(a)]);
 
 figure;
 semilogy(1:n,abs(c),'.--');
@@ -314,12 +372,12 @@ alignfigs;
 
 if savefig
     disp('saving figures...');
-    exportgraphics(figure(1),['matlab/images/err_vpa_' use_vpa '_fix_init' num2str(~no_hp_switch) '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
-    exportgraphics(figure(2),['matlab/images/ivalref_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
+    exportgraphics(figure(1),['matlab/images/err_m' num2str(m) '_vpa_' use_vpa '_fix_init' num2str(~no_hp_switch) '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '_erresttype' num2str(errest_alt) '.pdf'],'Resolution',400);
+    exportgraphics(figure(2),['matlab/images/ivalref_m' num2str(m) '_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
     exportgraphics(figure(3),['matlab/images/interval_tarpts_a' num2str(a), '.pdf'],'Resolution',400);
     exportgraphics(figure(4),['matlab/images/numerator_delta' num2str(delta) '_a' num2str(a), '.pdf'],'Resolution',400);
-    exportgraphics(figure(5),['matlab/images/Pk3_a=' num2str(a), '.pdf'],'Resolution',400);
-    exportgraphics(figure(6),['matlab/images/Qk3_a=' num2str(a), '.pdf'],'Resolution',400);
+    exportgraphics(figure(5),['matlab/images/Pk' num2str(m) '_a=' num2str(a), '.pdf'],'Resolution',400);
+    exportgraphics(figure(6),['matlab/images/Qk' num2str(m) '_a=' num2str(a), '.pdf'],'Resolution',400);
     disp('sucessfully saved figures');
 end
 end
