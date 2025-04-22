@@ -12,7 +12,7 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_cor
 %   basis choices as well as the corresponding basis coefficients and basis
 %   integral values.
 %
-% Without arguments runs test with both corrections active
+% Without arguments runs test defined below
 %
 % INPUTS:
 %   m                    - power of singularity 1/r^m
@@ -29,7 +29,7 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_cor
 %   corr_coeff_interp_sig- if true, correct first coeff using interpolated sigma(a)
 %   solve_nonshifted     - string, 'dp'/'qp' for double/quad precision solve
 %   solve_shifted        - string, 'dp'/'mp'/'qp' for double/mixed/quad precision solve
-%   use_bjorck_pereyra   - boolean, use Bjorck-Pereyra method to solve Vandermonde
+%   use_bjorck_pereyra   - boolean, use Björck-Pereyra method to solve Vandermonde systems
 %   errest_alt           - integer determines how to est cond number of sum
 %
 % OUTPUTS:

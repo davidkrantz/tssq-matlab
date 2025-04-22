@@ -12,16 +12,18 @@ function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N,varargin)
 % Based on recursions by Anna-Karin Tornberg & Katarina Gustavsson
 % Journal of Computational Physics 215 (2006) 172–196
 
-if nargin > 2
+if nargin == 3
     NO_HP_SWITCH = varargin{1}; % disables half plane switch for I1(1)
-elseif nargin > 3
+    use_vpa = 'none';
+elseif nargin == 4
+    NO_HP_SWITCH = varargin{1};
     use_vpa = varargin{2};
 elseif isa(z, 'sym')
-    use_vpa = 'all';
     NO_HP_SWITCH = true;
+    use_vpa = 'all';
 else
-    use_vpa = 'none';
     NO_HP_SWITCH = false;
+    use_vpa = 'none';
 end
 
 % Test switch to disable power series eval
@@ -31,6 +33,11 @@ NO_POWER_SERIES = false;
 if isa(z, 'sym')
     NO_POWER_SERIES = true;
     NO_HP_SWITCH = true;
+end
+
+% make sure we are not using vpa
+if strcmp(use_vpa,'none')
+    z = double(z);
 end
 
 % Setup variables
