@@ -198,21 +198,27 @@ for i = 1:M
     end
     adjv = lam.*fj;
     
-    % Ksum: condition number of the summation operator
+    % various estimation methods
     if errest_alt == 1
         % standard
-        kappasum = sum(abs(adjv))/abs(I);
+        kappa = sum(abs(adjv))/abs(I);
+        kappa = kappa*n;
     elseif errest_alt == 2
         % upper bound on summation terms
-        kappasum = (max(abs(adjv))*n)/abs(I);
+        kappa = (max(abs(adjv))*n)/abs(I);
+        kappa = kappa*n;
     elseif errest_alt == 3
         % average over k random samples
         k = 2;
         rind = randi(n,k,1);
-        kappasum = (n/k)*sum(abs(adjv(rind)))/abs(I);
+        kappa = (n/k)*sum(abs(adjv(rind)))/abs(I);
+        kappa = kappa*n;
+    elseif errest_alt == 4
+        % condition number of dot product using Euclidean norm
+        kappa = norm(lam,2)*norm(fj,2)/abs(I);
     end
     % final cancellation error estimate
-    errestv(i) = kappasum*eps*n;
+    errestv(i) = kappa*eps;
 
     % print vectors
     if i == 1
@@ -247,7 +253,7 @@ corr_coeff_interp_sig = 1; % correct using interp of layer dens
 solve_nonshifted = 'dp'; % solve non-shifted Vandermonde system in dp/qp
 solve_shifted = 'dp'; % solve shifted Vandermonde system in dp/mp/qp
 use_bjorck_pereyra = 1; % or solve Vandermonde systems using "\"
-errest_alt = 1; % which way to estimate condition number of sum
+errest_alt = 4; % which way to estimate cancellation error
 
 switch test_no
     case 1

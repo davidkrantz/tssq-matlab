@@ -50,29 +50,31 @@ switch test_no
     tol = 1e-10;      
   case 2
     % Comparison for nearby points
-    targtype = 'n';    
+    targtype = 'n';
     tol = 1e-6;
     dist = 1e-2;
   case 3
-    targtype = 'n';    
+    targtype = 'n';
     tol = 1e-10;
     dist = 1e-2;
   case 4
-    targtype = 'n';    
+    targtype = 'n';
     tol = 1e-6;
     dist = 1e-4;
   case 5
-    targtype = 'n';    
+    targtype = 'n';
     tol = 1e-10;
     dist = 1e-4;
   case 6                    % try lower nquad for lower acc.
    nquad = 4;  % #digits + 1
-   targtype = 's';    
+   targtype = 's';
    tol = 1e-3;
   case 7    % David
    targtype = 'n';
    tol = 1e-6;
-   dist = 1e-8;
+   %dist = 1e-4;
+   dist = 1e-6;
+   %dist = 1e-8;
   otherwise
     error('Unknown test no')
 end
@@ -161,7 +163,7 @@ disp(' ')
 disp('* Interpolatory quadrature')
 [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr_needed,specstats] = interpolatory_quadrature(...
     xj, yj, zj, sj, tj, wj, f1j, f2j, f3j, X, Y, Z, ...
-    x, y, z, xp, yp, zp, s, nquad, edges, rho, UPSAMPLE, slender_eps, tol);
+    x, y, z, s, nquad, edges, rho, UPSAMPLE, slender_eps, tol);
 
 % Compute errors
 if strcmp(WHICH_REFERENCE, 'integral')
@@ -185,11 +187,8 @@ specquadsh_errmaxmax = max(specquadsh_errmax(:))
 close all;
 
 % Plot
-if SAVEPLOTS
-    pubfig = @publication_fig;
-else
-    pubfig = @() false;
-end
+pubfig = @() false;
+SAVEPLOTS = 0;
 
 sfigure(1);
 clf; pubfig();
@@ -212,22 +211,26 @@ if targtype=='s'
   grid off
   box on
 else
-  semilogy(t(corr_needed),specquad_errmax(corr_needed),'o','markersize',3)
-  hold on;
   semilogy(t,specquad_errmax,'.');
   xlabel('t'); ylabel('err')
   hold on
-  semilogy(t,specquadsh_errmax,'.')
+  semilogy(t,specquadsh_errmax,'o','markersize',3);
+  hold on
+  semilogy(t(corr_needed),specquadsh_errmax(corr_needed),'d','markersize',3)
   semilogy(t,adquad_errmax,'.')
   yline(tol,'k',['tol=' num2str(tol)])
-  legend('unshifted bad','unshifted all','shifted','adap')
+  if sum(corr_needed) > 0
+    legend('unshifted all','shifted all','shifted corr','adap')
+  else
+    legend('unshifted all','shifted all','adap')
+  end
+  title(['dist=' num2str(dist)])
   grid on
 end
 if ~SAVEPLOTS && targtype=='s'
     title('Interpolatory quadrature')
 end
 
-  
 sfigure(3);
 clf; pubfig();
 if targtype=='s'
@@ -247,14 +250,8 @@ end
 title('Adaptive quadrature')
 
 % Test-specific plot saving
-if SAVEPLOTS && test_no==1
-    sfigure(2);
-    axis off
-    caxis([-16,-13])
-    text(-1,0,-2, ['$\max E_{rel}=$', ...
-                        sprintf('%.1e',specquad_errmaxmax)],'interpreter','latex')    
-    saveplot(1, 'long_fiber_geo.png')
-    saveplot(2, 'long_fiber_field.png')
+if SAVEPLOTS
+    exportgraphics(figure(2),['matlab/images/err_filament_dist' num2str(dist) '_tol' num2str(tol), '.pdf'],'Resolution',400);
 end
 
 % table line
@@ -266,7 +263,7 @@ disp(['% case ' num2str(test_no)])
 
 alignfigs;
 
-keyboard;
+%keyboard;
 
 end
 
@@ -307,9 +304,9 @@ end
 %%%%% INTERPOLATORY QUADRATURE
 
 function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corrneeded,stats] = interpolatory_quadrature(...
-    xj, yj, zj, sj, tj, wj, f1j, f2j, f3j, X, Y, Z, x, y, z, xp, yp, zp, s, nquad, edges, rho, UPSAMPLE, slender_eps, tol)
+    xj, yj, zj, sj, tj, wj, f1j, f2j, f3j, X, Y, Z, x, y, z, s, nquad, edges, rho, UPSAMPLE, slender_eps, tol)
     [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3] = deal(zeros(size(X)));
-    corrneeded = false(numel(size(X)),1);
+    corrneeded = false(numel(X),1);
     npan = numel(xj)/nquad;    
     [tgl, wgl] = legendre.gauss(nquad);
     if UPSAMPLE
@@ -340,7 +337,7 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
         wjpan = wj(idx);
         f1jpan = f1j(idx);
         f2jpan = f2j(idx);
-        f3jpan = f3j(idx);    
+        f3jpan = f3j(idx);
         % Upsample panel
         xjpan_up  = xjpan *B';
         yjpan_up  = yjpan *B';
@@ -350,10 +347,16 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
         f2jpan_up = f2jpan*B';
         f3jpan_up = f3jpan*B';
         tjpan_up = tjpan.'*B';
+        % current panel endpoints
+        ta = edges(j);
+        tb = edges(j+1);
+        tsc = (tb-ta)/2;
+        %tsc = 1/2*sum(wjpan);
         % Compute quadrature weights
         atic = tic();
         [all_w1, all_w3, all_w5, specquad_needed, all_roots] = line3_near_weights(tgl2, wgl2, xjpan_up, yjpan_up, zjpan_up, ...
                                                           X, Y, Z, rho);
+        t0_all_roots = (ta+tb)/2+(tb-ta)/2*all_roots; % roots in [0,1]
         % Evaluation count
         time_weights = time_weights + toc(atic);
         kerevals_near = kerevals_near + nquad2*sum(specquad_needed(:));
@@ -404,109 +407,111 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
                 I3R5 = sum(tmp3R5);
                 I1R3sh = I1R3; I2R3sh = I2R3; I3R3sh = I3R3;
                 I1R5sh = I1R5; I2R5sh = I2R5; I3R5sh = I3R5;
-                % estimate for 1/R^5
-                corrR35 = false(3,2);
-                corrR35(1,2) = cancellation_error_estimate(I1R5,tmp1R5) > tol;
-                corrR35(2,2) = cancellation_error_estimate(I2R5,tmp2R5) > tol;
-                corrR35(3,2) = cancellation_error_estimate(I3R5,tmp3R5) > tol;
-                corrR5 = sum(corrR35(:,2)) > 0;
-                if ~corrR5
-                    % 1/R^5 ok, now check 1/R^3
-                    corrR35(1,1) = cancellation_error_estimate(I1R3,tmp1R3) > tol;
-                    corrR35(2,1) = cancellation_error_estimate(I2R3,tmp2R3) > tol;
-                    corrR35(3,1) = cancellation_error_estimate(I3R3,tmp3R3) > tol;
-                    corrR3 = logical(sum(corrR35(:,1)));
-                else
-                    % 1/R^5 bad, assume same corr needed for 1/R^3
-                    corrR3 = true;
-                    corrR35(:,1) = corrR35(:,2);
-                end
-
                 v0 = all_roots(i); % root having real part in [-1,1]
-                %if false
-                %if abs(imag(v0)) < 1e-3 && abs(real(v0)) < 1
-                %    corrR35 = true(3,2);
-                %if abs(real(v0)) < 1
-                if (corrR5 || corrR3) && abs(real(v0)) < 1 %&& abs(imag(v0)) < 1e-3
-                    corrneeded(i) = true;
-                    sh = real(v0);
-                    if corrR5
-                        [~, p3sh, p5sh] = rsqrt_pow_integrals_shift(v0,nquad2);
+                if real(v0) <= 1.1
+                    w3 = all_w3(:,i);
+                    w5 = all_w5(:,i);
+                    normw3 = norm(w3,2);
+                    normw5 = norm(w5,2);
+                    toln = tol;
+                    % estimate for 1/R^5
+                    corrR35 = false(3,2);
+    %                 corrR35(1,2) = cancellation_error_estimate(I1R5,tmp1R5) > tol;
+    %                 corrR35(2,2) = cancellation_error_estimate(I2R5,tmp2R5) > tol;
+    %                 corrR35(3,2) = cancellation_error_estimate(I3R5,tmp3R5) > tol;
+                    corrR35(1,2) = cond_sum(normw5,g1R5,I1R5) > toln;
+                    corrR35(2,2) = cond_sum(normw5,g2R5,I2R5) > toln;
+                    corrR35(3,2) = cond_sum(normw5,g3R5,I3R5) > toln;
+                    corrR5 = sum(corrR35(:,2)) > 0;
+                    if ~corrR5
+                        % 1/R^5 ok, now check 1/R^3
+    %                     corrR35(1,1) = cancellation_error_estimate(I1R3,tmp1R3) > tol;
+    %                     corrR35(2,1) = cancellation_error_estimate(I2R3,tmp2R3) > tol;
+    %                     corrR35(3,1) = cancellation_error_estimate(I3R3,tmp3R3) > tol;
+                        corrR35(1,2) = cond_sum(normw3,g1R3,I1R3) > toln;
+                        corrR35(2,2) = cond_sum(normw3,g2R3,I2R3) > toln;
+                        corrR35(3,2) = cond_sum(normw3,g3R3,I3R3) > toln;
+                        corrR3 = logical(sum(corrR35(:,1)));
                     else
-                        [~, p3sh] = rsqrt_pow_integrals_shift(v0,nquad2);
+                        % 1/R^5 bad, assume same corr needed for 1/R^3
+                        corrR3 = true;
+                        corrR35(:,1) = corrR35(:,2);
                     end
-
-                    % current panel endpoints
-                    ta = edges(j);
-                    tb = edges(j+1);
-                    tsc = (tb-ta)/2;
-                    %tsc = 1/2*sum(wjpan);
-
-                    % root w real part [0,1] (actual root of gamma(t), t in [0,1])
-                    t0 = (ta+tb)/2+(tb-ta)/2*v0;
-                    a = real(t0);
-                    tdist = abs(tjpan_up.'-t0);
     
-                    % store all relevant values 
-                    GR35 = zeros(3*nquad2,2);
-                    GR35(:,1) = [g1R3;g2R3;g3R3];
-                    GR35(:,2) = [g1R5;g2R5;g3R5];
-                    IR35 = zeros(3,2);
-                    IR35(:,1) = [I1R3;I2R3;I3R3];
-                    IR35(:,2) = [I1R5;I2R5;I3R5];
+                    if corrR5 || corrR3
+                        corrneeded(i) = true;
+                        sh = real(v0);
+                        if corrR5
+                            [~, p3sh, p5sh] = rsqrt_pow_integrals_shift(v0,nquad2);
+                        else
+                            [~, p3sh] = rsqrt_pow_integrals_shift(v0,nquad2);
+                        end
     
-                    % eval layer dens at real(v0) in [-1,1]
-                    f1pana = bclag_interp(f1jpan_up.',tgl2,wbary,sh);
-                    f2pana = bclag_interp(f2jpan_up.',tgl2,wbary,sh);
-                    f3pana = bclag_interp(f3jpan_up.',tgl2,wbary,sh);
-                    %f1pana = x(a); f2pana = y(a); f3pana = z(a);
-                    % eval remaining integrand analytically
-                    xa = x(a); ya = y(a); za = z(a);
-                    r1a = xa-Xi; r2a = ya-Yi; r3a = za-Zi;
-                    tdista = abs(a-t0);
-                    sa = s(a);
-                    [~, u1R3a, u1R5a, ~, u2R3a, u2R5a, ~, u3R3a, u3R5a] ...
-                        = slender_body_kernel_split(r1a, r2a, r3a, f1pana, f2pana, f3pana, slender_eps);
-                    uR35a = [u1R3a, u1R5a;
-                             u2R3a, u2R5a;
-                             u3R3a, u3R5a];
-    
-                    for ii = 1:3
-                        for jj = 1:2
-                            corr = corrR35(ii,jj);
-                            if corr
-                                g = GR35(((ii-1)*nquad2+1):ii*nquad2,jj);
-                                h = g.*tdist.^(2*jj+1); % to expand in shifted monomial basis
-                                dcoeff = dvand(tgl2-sh,h);
-                                d1coeff = sa*uR35a(ii,jj)*tdista^(2*jj+1); % correction to d(1)
-                                %d1coeff = bclag_interp(h,tgl2,wbary,sh);
-                                dcoeff(1) = d1coeff;
-                                if jj == 1
-                                    IR35(ii,jj) = sum(dcoeff.*p3sh)/tsc^3;
-                                else
-                                    IR35(ii,jj) = sum(dcoeff.*p5sh)/tsc^5;
+                        % root w real part [0,1] (actual root of gamma(t), t in [0,1])
+                        t0 = t0_all_roots(i);
+                        a = real(t0);
+                        tdist = abs(tjpan_up.'-t0);
+        
+                        % store all relevant values 
+                        GR35 = zeros(3*nquad2,2);
+                        GR35(:,1) = [g1R3;g2R3;g3R3];
+                        GR35(:,2) = [g1R5;g2R5;g3R5];
+                        IR35 = zeros(3,2);
+                        IR35(:,1) = [I1R3;I2R3;I3R3];
+                        IR35(:,2) = [I1R5;I2R5;I3R5];
+        
+                        % eval layer dens at real(v0) in [-1,1]
+                        f1pana = bclag_interp(f1jpan_up.',tgl2,wbary,sh);
+                        f2pana = bclag_interp(f2jpan_up.',tgl2,wbary,sh);
+                        f3pana = bclag_interp(f3jpan_up.',tgl2,wbary,sh);
+                        %f1pana = x(a); f2pana = y(a); f3pana = z(a);
+                        % eval remaining integrand analytically
+                        xa = x(a); ya = y(a); za = z(a);
+                        r1a = xa-Xi; r2a = ya-Yi; r3a = za-Zi;
+                        tdista = abs(a-t0);
+                        sa = s(a);
+                        [~, u1R3a, u1R5a, ~, u2R3a, u2R5a, ~, u3R3a, u3R5a] ...
+                            = slender_body_kernel_split(r1a, r2a, r3a, f1pana, f2pana, f3pana, slender_eps);
+                        uR35a = [u1R3a, u1R5a;
+                                 u2R3a, u2R5a;
+                                 u3R3a, u3R5a];
+        
+                        for ii = 1:3
+                            for jj = 1:2
+                                corr = corrR35(ii,jj);
+                                if corr
+                                    g = GR35(((ii-1)*nquad2+1):ii*nquad2,jj);
+                                    h = g.*tdist.^(2*jj+1); % to expand in shifted monomial basis
+                                    dcoeff = dvand(tgl2-sh,h);
+                                    d1coeff = sa*uR35a(ii,jj)*tdista^(2*jj+1); % correction to d(1)
+                                    %d1coeff = bclag_interp(h,tgl2,wbary,sh);
+                                    dcoeff(1) = d1coeff;
+                                    if jj == 1
+                                        IR35(ii,jj) = sum(dcoeff.*p3sh)/tsc^3;
+                                    else
+                                        IR35(ii,jj) = sum(dcoeff.*p5sh)/tsc^5;
+                                    end
                                 end
                             end
                         end
+    
+    %                     err1R3 = abs(I1R3-IR35(1,1))/abs(I1R3);
+    %                     err2R3 = abs(I2R3-IR35(2,1))/abs(I2R3);
+    %                     err3R3 = abs(I3R3-IR35(3,1))/abs(I3R3);
+    %                     err1R5 = abs(I1R5-IR35(1,2))/abs(I1R5);
+    %                     err2R5 = abs(I2R5-IR35(2,2))/abs(I2R5);
+    %                     err3R5 = abs(I3R5-IR35(3,2))/abs(I3R5);
+    %                     if err1R3 > 1e-5 || err2R3 > 1e-5 || err3R3 > 1e-5 || err1R5 > 1e-5 || err2R5 > 1e-5 || err3R5 > 1e-5
+    %                         keyboard;
+    %                     end
+    
+                        I1R3sh = IR35(1,1);
+                        I2R3sh = IR35(2,1);
+                        I3R3sh = IR35(3,1);
+                        I1R5sh = IR35(1,2);
+                        I2R5sh = IR35(2,2);
+                        I3R5sh = IR35(3,2);
                     end
-
-%                     err1R3 = abs(I1R3-IR35(1,1))/abs(I1R3);
-%                     err2R3 = abs(I2R3-IR35(2,1))/abs(I2R3);
-%                     err3R3 = abs(I3R3-IR35(3,1))/abs(I3R3);
-%                     err1R5 = abs(I1R5-IR35(1,2))/abs(I1R5);
-%                     err2R5 = abs(I2R5-IR35(2,2))/abs(I2R5);
-%                     err3R5 = abs(I3R5-IR35(3,2))/abs(I3R5);
-%                     if err1R3 > 1e-5 || err2R3 > 1e-5 || err3R3 > 1e-5 || err1R5 > 1e-5 || err2R5 > 1e-5 || err3R5 > 1e-5
-%                         keyboard;
-%                     end
-
-                    I1R3sh = IR35(1,1);
-                    I2R3sh = IR35(2,1);
-                    I3R3sh = IR35(3,1);
-                    I1R5sh = IR35(1,2);
-                    I2R5sh = IR35(2,2);
-                    I3R5sh = IR35(3,2);
-                    
                 end
 
                 q1 = I1R1 + I1R3 + I1R5;
@@ -552,6 +557,11 @@ function est = cancellation_error_estimate(Stilde,x)
 n = numel(x);
 kappasum = sum(abs(x))/abs(Stilde);
 est = kappasum*eps*n;
+end
+
+function est = cond_sum(normw,f,wf)
+kappa = normw * norm(f,2) / abs(sum(wf));
+est = eps*kappa;
 end
 
 %%%%% ADAPTIVE QUADRATURE 2.5
