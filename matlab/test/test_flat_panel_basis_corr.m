@@ -15,31 +15,32 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_cor
 % Without arguments runs test defined below
 %
 % INPUTS:
-%   m                    - power of singularity 1/r^m
-%   sigma                - function handle for the layer density
-%   r                    - vanishing order of h(t) at t = a
-%   delta                - small offset for location of vanishing, h(t) = t - a + delta
-%   a                    - real part of singularity location t0
-%   bv                   - vector of imaginary parts of singularities t0 = a + ib
-%   n                    - number of Gauss-Legendre nodes (basis function order)
-%   use_vpa              - string, 'none'/'all'/'init' indicating whether to use vpa to compute basis integrals Pkm and Qkm
-%   no_hp_switch         - boolean, switch to disable half plane switch for I1(1)
-%   adj_method           - if true, solves non-shifted using adjoint method
-%   corr_coeff_exact     - if true, correct first basis coeff in shifted case with exact f(a)
-%   corr_coeff_interp_sig- if true, correct first coeff using interpolated sigma(a)
-%   solve_nonshifted     - string, 'dp'/'qp' for double/quad precision solve
-%   solve_shifted        - string, 'dp'/'mp'/'qp' for double/mixed/quad precision solve
-%   use_bjorck_pereyra   - boolean, use Björck-Pereyra method to solve Vandermonde systems
-%   errest_alt           - integer determines how to est cond number of sum
+%   m                     - power of singularity 1/r^m
+%   sigma                 - function handle for the layer density
+%   r                     - vanishing order of h(t) at t = a
+%   delta                 - small offset for location of vanishing, h(t) = t - a + delta
+%   a                     - real part of singularity location t0
+%   bv                    - vector of imaginary parts of singularities t0 = a + ib
+%   n                     - number of Gauss-Legendre nodes (basis function order)
+%   use_vpa               - string, 'none'/'all'/'init' indicating whether to use vpa to compute basis integrals Pkm and Qkm
+%   no_hp_switch          - boolean, switch to disable half plane switch for I1(1)
+%   adj_method            - if true, solves non-shifted using adjoint method
+%   corr_coeff_exact      - if true, correct first basis coeff in shifted case with exact f(a)
+%   corr_coeff_interp_sig - if true, correct first coeff using interpolated sigma(a)
+%   solve_nonshifted      - string, 'dp'/'qp' for double/quad precision solve
+%   solve_shifted         - string, 'dp'/'mp'/'qp' for double/mixed/quad precision solve
+%   use_bjorck_pereyra    - boolean, use Björck-Pereyra method to solve Vandermonde systems
+%   errest_alt            - integer determines how to est cond number of sum
 %
 % OUTPUTS:
-%   errv      - relative error in non-shifted basis evaluation for each b
-%   errshv    - relative error in shifted basis evaluation for each b
-%   c         - monomial basis coefficients (non-shifted)
-%   d         - monomial basis coefficients (shifted)
-%   pmat     - matrix of integrals P_k^m for non-shifted basis
-%   pshmat   - matrix of integrals Q_k^m for shifted basis
-%   irefv     - reference integral values computed via adaptive quadrature
+%   errv    - relative absolute error in non-shifted basis evaluation for each b
+%   errshv  - relative absolute error in shifted basis evaluation for each b
+%   errestv - cancellation error estimate
+%   c       - monomial basis coefficients (non-shifted)
+%   d       - monomial basis coefficients (shifted)
+%   pmat    - matrix of integrals P_k^m for non-shifted basis
+%   pshmat  - matrix of integrals Q_k^m for shifted basis
+%   irefv   - reference integral values computed via adaptive quadrature
 %
 % AUTHOR: David Krantz (davkra@kth.se), April 2025
 %

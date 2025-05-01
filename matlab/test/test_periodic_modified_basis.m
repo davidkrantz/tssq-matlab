@@ -1,4 +1,4 @@
-function [fstd,fmod,ck,dk,kstd,kmod,Vmod,ttj,ffj] = test_periodic_modified_basis(f,N,l,a)
+function [fstd,fmod,ck,dk,kstd,kmod,Vmod,ttj,ffj] = test_periodic_modified_basis(f,n,l,a,add_shifted_sine)
 % TEST_PERIODIC_MODIFIED_BASIS compares the performances of a modified
 %   Fourier basis with the standard one. The modified basis has to be
 %   hardcoded below.
@@ -10,10 +10,11 @@ function [fstd,fmod,ck,dk,kstd,kmod,Vmod,ttj,ffj] = test_periodic_modified_basis
 % Without arguments runs test defined below
 %
 % INPUTS:
-%   f - function handle to function that typically vanishes at t=a
-%   N - number of equidistant nodes on [0,2*pi) to sample f at
-%   l - power of sine term in modified basis
-%   a - point in (0,2*pi) where f(a) vanishes or almost vanishes
+%   f                - function handle to function that typically vanishes at t=a
+%   n                - number of equidistant nodes on [0,2*pi) to sample f at
+%   l                - power of sine term in modified basis
+%   a                - point in (0,2*pi) where f(a) vanishes or almost vanishes
+%   add_shifted_sine - boolean, if true, extends basis with sin(t-a) 
 %
 % OUTPUTS:
 %   fstd - reconstructed function values at points ttj using standard Fourier basis
@@ -33,19 +34,32 @@ if nargin == 0, test_basis; return; end
 rng(123); % fixes random seed
 Neval = 301; % nbr pts to evaluate reconstruction
 
-tj = linspace(0, 2*pi, N+1).'; tj(end) = []; % periodic grid in [0,2*pi)
+tj = linspace(0, 2*pi, n+1).'; tj(end) = []; % periodic grid in [0,2*pi)
 fj = f(tj); % function values at grid points
-kstd = get_k_vec(N,2*pi).'; % wavenumbers
+kstd = get_k_vec(n,2*pi).'; % wavenumbers
 
-ck = fftshift(fft(fj))/N; % standard Fourier basis coefficients
+ck = fftshift(fft(fj))/n; % standard Fourier basis coefficients
 
-kmod = get_k_vec(N-1,2*pi).'; % N-1 to account for added const fcs, makes sys square
+if add_shifted_sine
+    kmod = get_k_vec(n-2,2*pi).'; % N-2 account for added const and sine, makes sys square
+else
+    kmod = get_k_vec(n-1,2*pi).'; % same here but N-1
+end
 Vmod = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
-Vmod = [ones(N,1) Vmod]; % add constant function 1
+if add_shifted_sine
+    Vmod = [ones(n,1) sin(tj-a) Vmod]; % add constant function 1 and sine
+else
+    Vmod = [ones(n,1) Vmod]; % add only constant function 1
+end
 dk = Vmod\fj; % modified Fourier basis coefficients
 
-% check that we resolve the function
-if min(abs(dk./max(abs(dk)))) > 1e-8
+% check that we resolve the function (this could be improved!)
+if add_shifted_sine
+    fourier_decay = min(abs(dk(3:end)./max(abs(dk(3:end)))));
+else
+    fourier_decay = min(abs(dk(2:end)./max(abs(dk(2:end)))));
+end
+if fourier_decay > 1e-8
     warning('function might not be resolved by modified Fourier basis');
 end
 
@@ -63,7 +77,11 @@ fstd = real(fstd);
 
 % reconstruct at new points using modified Fourier basis
 Vmod_eval = sin((ttj-a)/2).^l.*exp(1i*kmod.'.*ttj);
-Vmod_eval = [ones(Neval,1) Vmod_eval];
+if add_shifted_sine
+    Vmod_eval = [ones(Neval,1) sin(ttj-a) Vmod_eval];
+else
+    Vmod_eval = [ones(Neval,1) Vmod_eval];
+end
 fmod = Vmod_eval*dk;
 if max(abs(imag(fmod)))>1e-8
     warning('recon imag part large for modified basis');
@@ -75,33 +93,47 @@ function test_basis
 
 close all;
 
-test_no = 3; % which test to run
+test_no = 5; % which test to run
+
+add_shifted_sine = 1; % extends basis with sin(t-a)
 
 switch test_no
     case 1
-        N = 40; % pts on grid
-        l = 2; % vanishing rate of modified basis
+        n = 40; % nodes
+        l = 2; % vanishing rate of modified basis, l=2 seems to be good!
         a = 1.5; % real part of root
         delta = 0; % constant offset at t=a
-        f = @(t) (sin((t-a)/2)).^4.*exp(cos(t))+delta; % smooth func vanishing at t=a
+        f = @(t) (sin((t-a)/1)).^4.*exp(cos(t))+delta; % smooth func vanishing at t=a
     case 2
-        N = 20;
+        n = 20;
         l = 2;
         a = 3.2512;
         delta = 1e-6;
-        f = @(t) cos((t-a-pi)/2).^2+delta + (sin((t-a)/2)).^4.*cos(t);
+        f = @(t) cos((t-a-pi)/2).^2+delta + (sin((t-a)/1)).^4.*cos(t);
     case 3
-        N = 40;
+        n = 40;
         l = 2;
         a = 5.5;
         delta = 0.1;
         tmp = 1:5;
-        f = @(t) sum(cos(tmp)./tmp.^2).*sin((t-a)/2).^4+delta;
+        f = @(t) sum(cos(tmp)./tmp.^2).*sin((t-a)/1).^4+delta;
+    case 4
+        n = 40;
+        l = 2;
+        a = 2.5;
+        delta = 1e-6;
+        f = @(t) cos(4*t+0.2).*(sin((t-a)/1).^2+delta);
+    case 5
+        n = 40;
+        l = 2;
+        a = 4.23;
+        delta = 1e-3;
+        f = @(t) exp(cos(t)).*(sin((t-a)/1)+delta).^2;
     otherwise
         error('invalid test number');
 end
 
-[fstd,fmod,ck,dk,kstd,kmod,Vmod,ttj,ffj] = test_periodic_modified_basis(f,N,l,a);
+[fstd,fmod,ck,dk,kstd,kmod,Vmod,ttj,ffj] = test_periodic_modified_basis(f,n,l,a,add_shifted_sine);
 
 err_std = abs(fstd-ffj);
 err_mod = abs(fmod-ffj);
@@ -114,12 +146,17 @@ fprintf('cond number of Vandermonde matrix:  %.2e\n',cond(Vmod));
 figure;
 semilogy(kstd,abs(ck),'.--');
 hold on;
-semilogy(kmod,abs(dk(2:end)),'.--');
+if add_shifted_sine
+    semilogy(kmod,abs(dk(3:end)),'.--');
+    title(['l=' num2str(l) ', cond(V)=' num2str(cond(Vmod)), ', |d(1)|=' num2str(abs(dk(1))), ', |d(2)|=' num2str(abs(dk(2)))]);
+else
+    semilogy(kmod,abs(dk(2:end)),'.--');
+    title(['l=' num2str(l) ', cond(V)=' num2str(cond(Vmod)), ', |d(1)|=' num2str(abs(dk(1)))]);
+end
 grid on;
 legend('Standard','Modified');
 xlabel('wavenumber, k');
 ylabel('Magnitude of coefficient');
-title(['l=' num2str(l) ', cond(V)=' num2str(cond(Vmod)), ', |d(1)|=' num2str(abs(dk(1)))]);
 
 figure;
 semilogy(ttj,err_std,'.');
@@ -130,7 +167,7 @@ xlim([0,2*pi]);
 legend('Standard','Modified');
 xlabel('t');
 ylabel('Absolute error');
-title('reconstruction error');
+title(['reconstruction error, addShiftedSine=' num2str(add_shifted_sine)]);
 
 figure;
 plot(ttj,fstd,'.');
