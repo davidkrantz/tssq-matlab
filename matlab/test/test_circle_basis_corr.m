@@ -65,6 +65,7 @@ fj = f(tj); % samples
 sj = sigma(tj); % only layer density function
 
 c = fftshift(fft(fj))/n; % standard Fourier basis coefficients
+normc = norm(c,2); % for cancellation error estimate
 
 V = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
 if add_shifted_sine
@@ -155,6 +156,24 @@ for i = 1:M
     % plain non-adj method, modified
     Imod = real(sum(d(2:end).*pmod(2:end))) + d(1)*p0; % separate cuz vpa
     errmodv(i) = abs((Imod-Ie)/Ie);
+
+    % cancellation error estimate
+    errestv(i) = cond_sum(normc,p,c.*p); % cond nbr of summation operation
+
+    % print vectors
+    if i == 1
+        Pkm = p;
+        c_Pkm = c.*Pkm;
+        sum_c_Pkm = nan*ones(numel(c_Pkm),1);
+        sum_c_Pkm(1) = sum(c_Pkm);
+        table(c,Pkm,c_Pkm,sum_c_Pkm)
+
+        Qkm = pmod;
+        d_Qkm = d.*Qkm;
+        sum_d_Qkm = nan*ones(numel(d_Qkm),1);
+        sum_d_Qkm(1) = sum(d_Qkm);
+        table(d,Qkm,d_Qkm,sum_d_Qkm)
+    end
 end
 warning on;
 
@@ -325,4 +344,9 @@ xlim([min(kmod),max(kmod)]);
 
 alignfigs;
 
+end
+
+function est = cond_sum(normw,f,wf)
+kappa = normw * norm(f,2) / abs(sum(wf));
+est = eps*kappa;
 end
