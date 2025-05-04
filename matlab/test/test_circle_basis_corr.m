@@ -1,5 +1,5 @@
 function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
-    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod,maxerrbnd_pmod2] = test_circle_basis_corr(...
+    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = test_circle_basis_corr(...
     m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_quadgk)
 % TEST_CIRCLE_BASIS_CORR compares the standard and modified Fourier basis
 %   to compute
@@ -42,7 +42,6 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
 %   maxerrbnd_Ie    - max error estimate bound of quadgk for reference values
 %   maxerrbnd_p     - max error estimate bound of quadgk for P_k^m
 %   maxerrbnd_pmod  - same but for Q_k^m
-%   maxerrbnd_pmod2 - same but for basis integral of sin(t-a) term
 %
 % AUTHOR: David Krantz (davkra@kth.se), May 2025
 
@@ -94,7 +93,7 @@ errestv = zeros(M,1);
 errmodv = zeros(M,1);
 pmat = zeros(n,M);
 pmodmat = zeros(n,M);
-maxerrbnd_Ie = 1e-100; maxerrbnd_p = 1e-100; maxerrbnd_pmod = 1e-100; maxerrbnd_pmod2 = 1e-100;
+[maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = deal(1e-100);
 warning off;
 for i = 1:M
     if use_vpa
@@ -109,7 +108,7 @@ for i = 1:M
     % integrand and reference value
     R = @(t) abs(exp(1i*t)-exp(1i*double(t0))); % dist func
     integrand = @(t) f(t)./R(t).^m;
-    [Ie,errbndtmp] = quadgk(integrand,0,2*pi,'MaxIntervalCount',1e7,'RelTol',0,'AbsTol',0);
+    [Ie,errbndtmp] = quadgk(integrand,0,2*pi,'MaxIntervalCount',1e7,'AbsTol',0,'RelTol',0);
     maxerrbnd_Ie = max(maxerrbnd_Ie,errbndtmp);
     irefv(i) = Ie;
 
@@ -137,13 +136,11 @@ for i = 1:M
         [pmodk(j),errbndtmp] = quadgk(@(t) gmod(t,kmod(j)),0,pi,'MaxIntervalCount',1e5,'AbsTol',0,'RelTol',0);
         maxerrbnd_pmod = max(maxerrbnd_pmod,errbndtmp);
     end
-    p0 = 2*(2/(1+r)*(2/(1+r)*E-(1-r)*K))/(1-r)^(m-1); 
+    p0 = 2*(2/(1+r)*(2/(1+r)*E-(1-r)*K))/(1-r)^(m-1); % hardcoded for m=3
     pmod(1) = p0; % basis integral for constant term
     if add_shifted_sine
-        % basis integral for sin(t-a) term
-        [pmod(2),errbndtmp] = quadgk(@(t) sin(t-a)./R(t).^m,0,2*pi,'MaxIntervalCount',1e5,'AbsTol',0,'RelTol',0);
-        maxerrbnd_pmod2 = max(maxerrbnd_pmod2,errbndtmp);
-        pmod(3:end) = 2*exp(1i*kmod*a).*pmodk./(1-r).^m; 
+        pmod(2) = 0; % basis integral for sin(t-a) term equals zero
+        pmod(3:end) = 2*exp(1i*kmod*a).*pmodk./(1-r).^m;
     else
         pmod(2:end) = 2*exp(1i*kmod*a).*pmodk./(1-r).^m;
     end
@@ -181,12 +178,12 @@ end
 
 function test_corrections
 
-test_no = 2; % which test to run
+test_no = 1; % which test to run
 
 m = 3; % power of singularity 1/r^m
 l = 2; % power of sine term in modified basis
 use_vpa = 0; % use vpa for certain calculations
-use_quadgk = 1; % compute standard basis integrals using quadgk instead of recurrences
+use_quadgk = 0; % compute standard basis integrals using quadgk instead of recurrences
 add_shifted_sine = 1; % extends basis with sin(t-a)
 corr_coeff = 'interp'; % determines how to correct the first modified coeff
 
@@ -194,7 +191,7 @@ switch test_no
     case 1
         n = 40; % nodes
         alpha = 2; % vanishing rate
-        delta = 1e-3; % offset
+        delta = 1e-6; % offset
         a = 4.23; % real of root
         bv = logspace(-5,0,4); % imag of root, "distance" to circle
         sigma = @(t) exp(cos(t)); % artifical layer density
@@ -210,13 +207,12 @@ switch test_no
 end
 
 [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
-    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod,maxerrbnd_pmod2] = test_circle_basis_corr(...
+    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = test_circle_basis_corr(...
     m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_quadgk);
 
 fprintf('maxerrbnd_Ie=%0.20e\n',maxerrbnd_Ie)
 fprintf('maxerrbnd_p=%0.20e\n',maxerrbnd_p)
 fprintf('maxerrbnd_pmod=%0.20e\n',maxerrbnd_pmod)
-fprintf('maxerrbnd_pmod2=%0.20e\n',maxerrbnd_pmod2)
 
 % prepare plots
 M = numel(bv);
