@@ -37,7 +37,7 @@ N = length(c_coeffs); % total number of standard Fourier modes
 w = exp(1i*a); % exponential factors for shift a
 winv = conj(w);
 
-b_coeffs = zeros(1,N-2); % modified basis coefficients output vector
+b_coeffs = zeros(N-2,1); % modified basis coefficients output vector
 
 % determine index of mode k=0 in c_coeffs and b_coeffs
 if mod(N,2) == 0

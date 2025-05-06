@@ -1,5 +1,5 @@
 function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral)
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft)
 % TEST_CIRCLE_BASIS_CORR compares the standard and modified Fourier basis
 %   to compute
 %   
@@ -7,7 +7,7 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %
 % [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = ...
 %   test_circle_basis_corr(m,l,sigma,alpha,delta,a,bv,n,...
-%   corr_coeff,add_shifted_sine,use_vpa,use_integral) returns the relative 
+%   corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft) returns the relative 
 %   error of the two basis choices as well as the basis coefficients and 
 %   basis integral values.
 %
@@ -26,6 +26,8 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %   use_vpa          - boolean, for certain calculations
 %   use_integral     - boolean, if true, computes standard basis integrals 
 %                      using "integral" instead of recurrence formulas
+%   use_fft          - boolean, if true, computes modified basis
+%                      coefficients from the standard ones computed via FFT
 %
 % OUTPUTS:
 %   errv            - relative absolute error in standard basis evaluation for each b
@@ -62,13 +64,18 @@ sj = sigma(tj); % only layer density function
 c = fftshift(fft(fj))/n; % standard Fourier basis coefficients
 normc = norm(c,2); % for cancellation error estimate
 
-V = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
-if add_shifted_sine
-    V = [ones(n,1) sin(tj-a) V]; % add constant function 1 and shifted sine
+if use_fft
+    [a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
+    d = [a0;a1;b_coeffs];
 else
-    V = [ones(n,1) V]; % add constant function 1
+    V = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
+    if add_shifted_sine
+        V = [ones(n,1) sin(tj-a) V]; % add constant function 1 and shifted sine
+    else
+        V = [ones(n,1) V]; % add constant function 1
+    end
+    d = V\fj; % modified Fourier basis coefficients
 end
-d = V\fj; % modified Fourier basis coefficients
 
 % correct first coefficient in modified basis
 if strcmp(corr_coeff,'exact')
@@ -211,10 +218,11 @@ test_no = 1; % which test to run
 
 m = 3; % power of singularity 1/r^m
 l = 2; % power of sine term in modified basis
-use_vpa = 0; % use vpa for certain calculations
-use_integral = 0; % compute basis integrals using "integral" instead of rec
 add_shifted_sine = 1; % extends basis with sin(t-a)
 corr_coeff = 'interp'; % determines how to correct the first modified coeff
+use_vpa = 0; % use vpa for certain calculations
+use_integral = 0; % compute basis integrals using "integral" instead of rec
+use_fft = 1; % compute modified basis coefficients via FFT
 
 switch test_no
     case 1
@@ -236,7 +244,7 @@ switch test_no
 end
 
 [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral);
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft);
 
 % prepare plots
 M = numel(bv);
@@ -244,6 +252,10 @@ tj = linspace(0,2*pi,n+1).'; tj(end) = [];
 h = @(t) sin(t-a)+delta;
 f = @(t) sigma(t).*h(t).^alpha;
 fj = f(tj);
+
+% prints
+fprintf('max relative error standard basis: %.14e\n', max(errv));
+fprintf('max relative error modified basis: %.14e\n', max(errmodv));
 
 % plots
 close all;
