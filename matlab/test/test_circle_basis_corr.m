@@ -1,16 +1,15 @@
-function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
-    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_quadgk)
+function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_basis_corr(...
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral)
 % TEST_CIRCLE_BASIS_CORR compares the standard and modified Fourier basis
 %   to compute
 %   
-%   I^m(t_0) = \int_{0}^{2\pi} \frac{f(t)}{|e^{it}-e^{it_0}|^m} dt, m=1,3,5
+%   I^m(t_0) = \int_{0}^{2\pi} \frac{f(t)}{|e^{it}-e^{it_0}|^m} dt, m=3,5
 %
-% [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,maxerrbnd_Ie,...
-%   maxerrbnd_p,maxerrbnd_pmod,kstd,kmod] = test_circle_basis_corr(...
-%   m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_quadgk)
-%   returns the relative error of the two basis choices as well as the
-%   basis coefficients and basis integral values.
+% [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = ...
+%   test_circle_basis_corr(m,l,sigma,alpha,delta,a,bv,n,...
+%   corr_coeff,add_shifted_sine,use_vpa,use_integral) returns the relative 
+%   error of the two basis choices as well as the basis coefficients and 
+%   basis integral values.
 %
 % Without arguments runs test defined below
 %
@@ -25,8 +24,8 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
 %   corr_coeff       - string, 'exact'/'interp' for exact or Fourier interp
 %   add_shifted_sine - boolean, if true, extends basis with sin(t-a)
 %   use_vpa          - boolean, for certain calculations
-%   use_quadgk       - boolean, if true, computes standard basis integrals 
-%                      using quadgk instead of recurrence formulas
+%   use_integral     - boolean, if true, computes standard basis integrals 
+%                      using "integral" instead of recurrence formulas
 %
 % OUTPUTS:
 %   errv            - relative absolute error in standard basis evaluation for each b
@@ -39,9 +38,6 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
 %   irefv           - reference integral values computed via adaptive quadrature
 %   kstd            - wavenumbers of standard Fourier basis
 %   kmod            - wavenumbers of modified Fourier basis
-%   maxerrbnd_Ie    - max error estimate bound of quadgk for reference values
-%   maxerrbnd_p     - max error estimate bound of quadgk for P_k^m
-%   maxerrbnd_pmod  - same but for Q_k^m
 %
 % AUTHOR: David Krantz (davkra@kth.se), May 2025
 
@@ -93,8 +89,6 @@ errestv = zeros(M,1);
 errmodv = zeros(M,1);
 pmat = zeros(n,M);
 pmodmat = zeros(n,M);
-[maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = deal(1e-100);
-warning off;
 for i = 1:M
     if use_vpa
         b = vpa(bv(i));
@@ -108,41 +102,78 @@ for i = 1:M
     % integrand and reference value
     R = @(t) abs(exp(1i*t)-exp(1i*double(t0))); % dist func
     integrand = @(t) f(t)./R(t).^m;
-    [Ie,errbndtmp] = quadgk(integrand,0,2*pi,'MaxIntervalCount',1e7,'AbsTol',0,'RelTol',0);
-    maxerrbnd_Ie = max(maxerrbnd_Ie,errbndtmp);
+    warning off;
+    Ie1 = integral(integrand,0,a,'AbsTol',0,'RelTol',0);
+    Ie2 = integral(integrand,a,2*pi,'AbsTol',0,'RelTol',0);
+    warning on;
+    Ie = Ie1+Ie2;
     irefv(i) = Ie;
 
     % basis integrals, standard
-    if use_quadgk
-        g = @(t,k) cos(k*t)./(1-ell(double(r))*sin(t/2).^2).^(m/2);
+    if use_integral
+        gstd = @(t,k) cos(k*t)./(1-ell(double(r))*sin(t/2).^2).^(m/2);
         muk = zeros(numel(kstd),1);
         for j = 1:numel(kstd)
-            [muk(j),errbndtmp] = quadgk(@(t) g(t,kstd(j)),0,pi,'MaxIntervalCount',1e5,'AbsTol',0,'RelTol',0);
-            maxerrbnd_p = max(maxerrbnd_p,errbndtmp);
+            muk(j) = integral(@(t) gstd(t,kstd(j)),0,pi,'AbsTol',0,'RelTol',0);
         end
         p = 2*exp(1i*kstd*a).*muk./(1-r).^m; % scale from rewriting og int
     else
         kmaxstd = max(abs(kstd));
-        muk = periodic_basis_integrals(r,kmaxstd,n,K,E,m); % recurrences
+        [mu1k,mu3k,mu5k] = periodic_basis_integrals(r,kmaxstd,n,K,E); % recurrences
+        if m == 3
+            muk = mu3k;
+        else
+            muk = mu5k;
+        end
         p = (2*exp(1i*kstd*a).*muk)./(1-r).^(m-1);
     end
     pmat(:,i) = p;
 
     % basis integrals, modified
-    gmod = @(t,k) (sin(t/2).^l.*cos(k*t))./(1-ell(double(r))*sin(t/2).^2).^(m/2);
     pmod = zeros(numel(kstd),1);
-    pmodk = zeros(numel(kmod),1);
-    for j = 1:numel(kmod)
-        [pmodk(j),errbndtmp] = quadgk(@(t) gmod(t,kmod(j)),0,pi,'MaxIntervalCount',1e5,'AbsTol',0,'RelTol',0);
-        maxerrbnd_pmod = max(maxerrbnd_pmod,errbndtmp);
-    end
-    p0 = 2*(2/(1+r)*(2/(1+r)*E-(1-r)*K))/(1-r)^(m-1); % hardcoded for m=3
-    pmod(1) = p0; % basis integral for constant term
-    if add_shifted_sine
-        pmod(2) = 0; % basis integral for sin(t-a) term equals zero
-        pmod(3:end) = 2*exp(1i*kmod*a).*pmodk./(1-r).^m;
+    if use_integral || ~add_shifted_sine
+        gmod = @(t,k) (sin(t/2).^l.*cos(k*t))./(1-ell(double(r))*sin(t/2).^2).^(m/2);
+        pmodk = zeros(numel(kmod),1);
+        for j = 1:numel(kmod)
+            pmodk(j) = integral(@(t) gmod(t,kmod(j)),0,pi,'AbsTol',0,'RelTol',0);
+        end
+        pmodk = 2*pmodk./(1-r).^m;
     else
-        pmod(2:end) = 2*exp(1i*kmod*a).*pmodk./(1-r).^m;
+        % compute as combination of the old basis integral values
+        if m == 3
+            pmodk = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*mu3k(2:end-1) + ((m/2+kmod-1)./(2*r).*mu1k(2:end-1)-(m/2+kmod-2)./(1+r^2).*mu1k(1:end-2))./(m/2-1));
+        else
+            pmodk = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*mu5k(2:end-1) + ((m/2+kmod-1)./(2*r).*mu3k(2:end-1)-(m/2+kmod-2)./(1+r^2).*mu3k(1:end-2))./(m/2-1));
+        end
+    end
+    % basis integral for constant term
+    if m == 3
+        if use_integral
+            p0 = 2*(2/(1+r)*(2/(1+r)*E-(1-r)*K))/(1-r)^(m-1);
+        else
+            if mod(n,2) == 0
+                p0 = 2*mu3k(n/2+1)/(1-r)^(m-1);
+            else
+                p0 = 2*mu3k((n-1)/2+1)/(1-r)^(m-1);
+            end
+        end
+    else
+        if use_integral
+            p0 = 2*(2/(3*(1+r)^4)*(8*(1+r^2)*E-(1-r)*(1+r)*(5+3*r^2)*K))/(1-r)^(m-1);
+        else
+            if mod(n,2) == 0
+                p0 = 2*mu5k(n/2+1)/(1-r)^(m-1);
+            else
+                p0 = 2*mu5k((n-1)/2+1)/(1-r)^(m-1);
+            end
+        end
+    end
+    pmod(1) = p0;
+    if add_shifted_sine
+        pmod(2) = 0; % basis integral for sin(t-a) term always equals zero
+        pmod(3:end) = exp(1i*kmod*a).*pmodk;
+    else
+        pmod(2:end) = exp(1i*kmod*a).*pmodk;
     end
     pmodmat(:,i) = pmod;
 
@@ -172,8 +203,6 @@ for i = 1:M
         table(d,Qkm,d_Qkm,sum_d_Qkm)
     end
 end
-warning on;
-
 end
 
 function test_corrections
@@ -183,36 +212,31 @@ test_no = 1; % which test to run
 m = 3; % power of singularity 1/r^m
 l = 2; % power of sine term in modified basis
 use_vpa = 0; % use vpa for certain calculations
-use_quadgk = 0; % compute standard basis integrals using quadgk instead of recurrences
+use_integral = 0; % compute basis integrals using "integral" instead of rec
 add_shifted_sine = 1; % extends basis with sin(t-a)
 corr_coeff = 'interp'; % determines how to correct the first modified coeff
 
 switch test_no
     case 1
-        n = 40; % nodes
+        n = 60; % nodes
         alpha = 2; % vanishing rate
         delta = 1e-6; % offset
         a = 4.23; % real of root
-        bv = logspace(-5,0,4); % imag of root, "distance" to circle
+        bv = logspace(-5,0,20); % imag of root, "distance" to circle
         sigma = @(t) exp(cos(t)); % artifical layer density
     case 2
-        n = 40;
+        n = 41;
         alpha = 2;
         delta = 0;
         a = 1.23;
-        bv = logspace(-5,0,4);
+        bv = logspace(-5,0,20);
         sigma = @(t) sin(2*t+1);
     otherwise
         error('invalid test number');
 end
 
-[errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,...
-    maxerrbnd_Ie,maxerrbnd_p,maxerrbnd_pmod] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_quadgk);
-
-fprintf('maxerrbnd_Ie=%0.20e\n',maxerrbnd_Ie)
-fprintf('maxerrbnd_p=%0.20e\n',maxerrbnd_p)
-fprintf('maxerrbnd_pmod=%0.20e\n',maxerrbnd_pmod)
+[errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,] = test_circle_basis_corr(...
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral);
 
 % prepare plots
 M = numel(bv);
@@ -300,17 +324,11 @@ figure;
 loglog(bv,abs(pmodmat(1,:)),'.');
 grid on;
 hold on;
-yline(abs(d(1)),'k','|d(1)|');
-if add_shifted_sine
-    loglog(bv,abs(pmodmat(2,:)),'.');
-    yline(abs(d(2)),'k','|d(2)|');
-    legend('|p(1)|','','|p(2)|');
-else
-    legend('|p(1)|');
-end
+loglog(bv,abs(d(1)*pmodmat(1,:)),'.');
+legend('|p(1)|','|d(1)p(1)|');
 xlabel('b');
 ylabel('magnitude of coeff');
-title('magnitude of constant coeff in modified basis');
+title('constant coeff in modified basis');
 
 figure;
 semilogy(kstd,abs(c),'.--');
@@ -346,3 +364,50 @@ function est = cond_sum(normw,f,wf)
 kappa = normw * norm(f,2) / abs(sum(wf));
 est = eps*kappa;
 end
+
+% old function, keep here just in case
+% function mu = new_rec(r,kmax,nph,m)
+% kvec = 0:kmax;
+% M = length(kvec);
+% [K,E] = ellipke(r^2);
+% 
+% % p = 1/2
+% P(1,1) = 2*K;
+% P(2,1) = 2/r*(-E+K);
+% % p = 3/2
+% P(1,2) = 2/(1+r)*(2/(1+r)*E-(1-r)*K);
+% % p = 5/2
+% P(1,3) = 2/(3*(1+r)^4)*(8*(1+r^2)*E-(1-r)*(1+r)*(5+3*r^2)*K);
+% 
+% % Recurrence for p = 1/2
+% for i = 3:M
+%     k = kvec(i);
+%     P(i,1) = (1+r^2)*2*(k-1)/(2*k-1)/r*P(i-1,1) - (2*k-3)/(2*k-1)*P(i-2,1);
+% end
+% 
+% % Recurrence for p = 3/2, 5/2
+% plist = [3/2;5/2];
+% for j = 1:2
+%     ptmp = plist(j);
+%     for i = 2:M
+%         k = kvec(i);
+%         P(i,j+1) = (1+r^2)/2/r*P(i-1,j+1)-(1-r)^2*(ptmp+k-2)/(ptmp-1)/2/r*P(i-1,j);
+%     end
+% end
+% 
+% if m == 3
+%     mu0 = 2.*r.^(-1).*(1+r).^(-2).*((-1).*E+K+K.*r);
+%     muktmp = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*P(2:end,2) + ((m/2+kvec(2:end).'-1)./(2*r).*P(2:end,1)-(m/2+kvec(2:end).'-2)./(1+r^2).*P(1:end-1,1))./(m/2-1));
+% else
+%     mu0 = (-2/3).*((-1)+r).^(-2).*r.^(-1).*(1+r).^(-4).*(E+E.*((-6)+r).*r+K.*((-1)+r.*(3+r+(-3).*r.^2)));
+%     muktmp = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*P(2:end,3) + ((m/2+kvec(2:end).'-1)./(2*r).*P(2:end,2)-(m/2+kvec(2:end).'-2)./(1+r^2).*P(1:end-1,2))./(m/2-1));
+% end
+% 
+% muktmp = [mu0; muktmp];
+% 
+% if kmax ~= nph/2
+%     mu = [conj(muktmp(M:-1:2)); muktmp];
+% else
+%     mu = [conj(muktmp(M:-1:2)); muktmp(1:end-1)];
+% end
+% end

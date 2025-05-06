@@ -1,4 +1,5 @@
-function mu = periodic_basis_integrals(r,kmax,nph,K,E,m)
+function [mu1,mu3,mu5] = periodic_basis_integrals(r,kmax,nph,K,E)
+% quite naively implemented, should be rewritten
 klist = (0:kmax)';
 M = length(klist);
 P = zeros(M,3);
@@ -36,24 +37,20 @@ else
     P(1,3) = 2/3;
 end
 
-if kmax == 0
-    mu = P(1,ceil(m/2));
-    return
-end
-
 % Recurrence for p = 1/2
 for i = 3:M
     k = klist(i);
     P(i,1) = (1+r^2)*2*(k-1)/(2*k-1)/r*P(i-1,1) - (2*k-3)/(2*k-1)*P(i-2,1);
 end
 
-if m == 1
-    muk = P(:,1);
-    if kmax ~= nph/2
-        mu = [flipud(conj(muk(2:end))); muk];
-    else
-        mu = [flipud(conj(muk(2:end))); muk(1:end-1)];
-    end
+muk = P(:,1);
+if kmax ~= nph/2
+    mu1 = [flipud(conj(muk(2:end))); muk];
+else
+    mu1 = [flipud(conj(muk(2:end))); muk(1:end-1)];
+end
+
+if nargout == 1
     return;
 end
 
@@ -65,21 +62,23 @@ for j = 1:2
         k = klist(i);
         P(i,j+1) = (1+r^2)/2/r*P(i-1,j+1)-(1-r)^2*(ptmp+k-2)/(ptmp-1)/2/r*P(i-1,j);
     end
-    if m == 3
+    if nargout > 1
         muk = P(:,2);
         if kmax ~= nph/2
-            mu = [conj(muk(M:-1:2)); muk];
+            mu3 = [conj(muk(M:-1:2)); muk];
         else
-            mu = [conj(muk(M:-1:2)); muk(1:end-1)];
+            mu3 = [conj(muk(M:-1:2)); muk(1:end-1)];
         end
+    end
+    if nargout == 2
         return;
     end
 end
 
 muk = P(:,3);
 if kmax ~= nph/2
-    mu = [conj(muk(M:-1:2)); muk];
+    mu5 = [conj(muk(M:-1:2)); muk];
 else
-    mu = [conj(muk(M:-1:2)); muk(1:end-1)];
+    mu5 = [conj(muk(M:-1:2)); muk(1:end-1)];
 end
 end
