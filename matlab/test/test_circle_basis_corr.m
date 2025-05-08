@@ -82,7 +82,7 @@ if strcmp(corr_coeff,'exact')
     d(1) = f(a);
 elseif strcmp(corr_coeff,'interp')
     sjk = fftshift(fft(sj))/n; % Fourier coefficients of layer dens
-    sigma_interp = exp(1i*kstd.'*a)*sjk; % interpolate layer dens at t=a
+    sigma_interp = real(exp(1i*kstd.'*a)*sjk); % interpolate layer dens at t=a
     d(1) = sigma_interp*h(a)^alpha; % eval remaining part of kernel analytically
 end
 
@@ -148,7 +148,7 @@ for i = 1:M
     else
         % compute as combination of the old basis integral values
         if m == 3
-            pmodk = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*mu3k(2:end-1) + ((m/2+kmod-1)./(2*r).*mu1k(2:end-1)-(m/2+kmod-2)./(1+r^2).*mu1k(1:end-2))./(m/2-1));
+            pmodk = 0.5 * (-(1-r)^2/(2*r*(1+r^2)).*mu3k(2:end-1) + ((m/2+kmod-1)./(2*r).*mu1k(2:end-1)-(m/2+kmod-2)./(1+r^2).*mu1k(1:end-2))./(m/2-1));
         else
             pmodk = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*mu5k(2:end-1) + ((m/2+kmod-1)./(2*r).*mu3k(2:end-1)-(m/2+kmod-2)./(1+r^2).*mu3k(1:end-2))./(m/2-1));
         end

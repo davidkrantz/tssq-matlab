@@ -669,15 +669,6 @@ function [x, y, z, xp, yp, zp] = squiggle()
     zp = @(t) real(c(3,:)*(2i*pi*k'.*exp(2i*pi*k'*t(:)')));
 end
 
-function [t, w] = panelization(npan, nquad)
-    [X, W] = legendre.gauss(nquad); 
-    X = (X+1)/2; W = W/2;   % on [0,1]
-    t = bsxfun(@plus, X/npan, (0:npan-1)/npan);
-    t = t(:);             % G-L panelization of param    
-    w = repmat(W/npan, 1, npan);
-    w = w(:);
-end
-
 function [tj, wj, npan, edges] = adaptive_panelization(s, nquad, tol)
     [tgl, wgl] = legendre.gauss(nquad); 
     tgl = (tgl+1)/2; wgl = wgl/2; % [0,1]
