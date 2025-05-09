@@ -1,84 +1,84 @@
-function [mu1,mu3,mu5] = periodic_basis_integrals(r,kmax,nph,K,E)
-% quite naively implemented, should be rewritten
+function [mu1,mu3,mu5] = periodic_basis_integrals(r,kmax,n,K,E)
+% PERIODIC_BASIS_INTEGRALS compute integrals mu of periodic basis functions
+%
+% [mu1 mu3,mu5] = PERIODIC_BASIS_INTEGRALS(r,kmax,n,K,E)
+%   returns vectors of basis integrals of periodic basis functions with 
+%   singularities of order p = 1/2, 3/2, 5/2, constructed via recurrence
+%   relations
+%
+% INPUTS:
+%   r    - scalar, 0 < r < 1, defined from root
+%   kmax - maximum Fourier wavenumber (positive integer).
+%   n    - number of equispaced discretization points in periodic direction
+%   K    - complete elliptic integral of the 1st kind, eval at r^2, K(r^2)
+%   E    - complete elliptic integral of the 2nd kind, eval at r^2, E(r^2)
+%
+% OUTPUTS:
+%   mu1 - basis integrals for singularity p = 1/2
+%   mu3 - basis integrals for singularity p = 3/2 (if requested)
+%   mu5 - basis integrals for singularity p = 5/2 (if requested)
+%
+% NOTE: Recurrence relations from Lemma 2.3 in 
+%   https://arxiv.org/pdf/2412.19575
+
 klist = (0:kmax)';
-M = length(klist);
-P = zeros(M,3);
+M = kmax + 1;
 
-% f = @(phi,r,k,m) cos(k*phi)./(1-2*r*cos(phi)+r^2).^(m/2);
-% warning off;
-% for i = 1:M
-%     k = klist(i);
-%     P(i,3) = integral(@(phi) f(phi,r,k,m),0,pi,'AbsTol',1e-14,'RelTol',1e-14);
-% end
-% warning on;
-% muk = P(:,3);
-% muk = (1-r).^(m-1)*muk;
-% mu = [flipud(conj(muk(2:end))); muk];
-% return;
+% p=1/2 (col 1), 3/2 (col 2), 5/2 (col 3)
+P = zeros(M, 3);
 
-% Check if we evaluate in root
-if r ~= 1
-    % p = 1/2
-    P(1,1) = 2*K;
-    P(2,1) = 2/r*(-E+K);
-    % p = 3/2
-    P(1,2) = 2/(1+r)*(2/(1+r)*E-(1-r)*K);
-    % p = 5/2
-    P(1,3) = 2/(3*(1+r)^4)*(8*(1+r^2)*E-(1-r)*(1+r)*(5+3*r^2)*K);
-else
-    % K(1) is not defined, compute instead as K(1-eps)
-    K = log(4/sqrt(1-(1-eps)^2));
-    % p = 1/2
-    P(1,1) = 2*K;
-    P(2,1) = 2/r*(-E+K);
-    % p = 3/2
-    P(1,2) = 1;
-    % p = 5/2
-    P(1,3) = 2/3;
-end
+% constants
+r2 = r^2;
+rm1 = 1 - r;
+rp1 = 1 + r;
+rp1_4 = rp1^4;
+inv_r = 1 / r;
 
-% Recurrence for p = 1/2
+% initial values
+% p = 1/2
+P(1,1) = 2 * K;
+P(2,1) = 2 * inv_r * (-E + K);
+
+% p = 3/2
+P(1,2) = 2 / rp1 * (2 / rp1 * E - rm1 * K);
+
+% p = 5/2
+P(1,3) = 2 / (3 * rp1_4) * (8 * (1 + r2) * E - rm1 * rp1 * (5 + 3*r2) * K);
+
+% recurrence for p=1/2
 for i = 3:M
     k = klist(i);
-    P(i,1) = (1+r^2)*2*(k-1)/(2*k-1)/r*P(i-1,1) - (2*k-3)/(2*k-1)*P(i-2,1);
+    denom = 2*k - 1;
+    P(i,1) = (1 + r2) * 2 * (k - 1) / denom * inv_r * P(i-1,1) ...
+           - (2*k - 3) / denom * P(i-2,1);
 end
 
-muk = P(:,1);
-if kmax ~= nph/2
-    mu1 = [flipud(conj(muk(2:end))); muk];
+if kmax ~= n / 2
+    mu1 = [conj(P(M:-1:2,1)); P(:,1)];
 else
-    mu1 = [flipud(conj(muk(2:end))); muk(1:end-1)];
+    mu1 = [conj(P(M:-1:2,1)); P(1:end-1,1)];
 end
 
 if nargout == 1
     return;
 end
 
-% Recurrence for p = 3/2, 5/2
-plist = [3/2;5/2];
-for j = 1:2
-    ptmp = plist(j);
-    for i = 2:M
-        k = klist(i);
-        P(i,j+1) = (1+r^2)/2/r*P(i-1,j+1)-(1-r)^2*(ptmp+k-2)/(ptmp-1)/2/r*P(i-1,j);
-    end
-    if nargout > 1
-        muk = P(:,2);
-        if kmax ~= nph/2
-            mu3 = [conj(muk(M:-1:2)); muk];
-        else
-            mu3 = [conj(muk(M:-1:2)); muk(1:end-1)];
-        end
-    end
-    if nargout == 2
-        return;
-    end
+% recurrence for p=3/2 and 5/2 (vectorized over p)
+plist = [3/2, 5/2];
+rm1_2 = rm1^2;
+a = (1 + r2) / (2 * r);
+b = rm1_2 / (2 * r);
+for i = 2:M
+    k = klist(i);
+    c = (plist + (k - 2)) ./ (plist - 1);
+    P(i,2:3) = a * P(i-1,2:3) - b * c .* P(i-1,1:2);
 end
 
-muk = P(:,3);
-if kmax ~= nph/2
-    mu5 = [conj(muk(M:-1:2)); muk];
+if kmax ~= n / 2
+    mu3 = [conj(P(M-1:2,2)); P(:,2)];
+    mu5 = [conj(P(M-1:2,3)); P(:,3)];
 else
-    mu5 = [conj(muk(M:-1:2)); muk(1:end-1)];
+    mu3 = [conj(P(M:-1:2,2)); P(1:end-1,2)];
+    mu5 = [conj(P(M:-1:2,3)); P(1:end-1,3)];
 end
 end
