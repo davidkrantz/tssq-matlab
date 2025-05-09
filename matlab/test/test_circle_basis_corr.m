@@ -1,5 +1,5 @@
 function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft)
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft,adj_method)
 % TEST_CIRCLE_BASIS_CORR compares the standard and modified Fourier basis
 %   to compute
 %   
@@ -7,9 +7,9 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %
 % [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = ...
 %   test_circle_basis_corr(m,l,sigma,alpha,delta,a,bv,n,...
-%   corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft) returns the relative 
-%   error of the two basis choices as well as the basis coefficients and 
-%   basis integral values.
+%   corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft,adj_method) 
+%   returns the relative error of the two basis choices as well as the 
+%   basis coefficients and basis integral values.
 %
 % Without arguments runs test defined below
 %
@@ -28,6 +28,7 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %                      using "integral" instead of recurrence formulas
 %   use_fft          - boolean, if true, computes modified basis
 %                      coefficients from the standard ones computed via FFT
+%   adj_method       - boolean, if true, solves non-shifted using adjoint method
 %
 % OUTPUTS:
 %   errv            - relative absolute error in standard basis evaluation for each b
@@ -62,9 +63,15 @@ fj = f(tj); % samples
 sj = sigma(tj); % only layer density function
 
 c = fftshift(fft(fj))/n; % standard Fourier basis coefficients
-normc = norm(c,2); % for cancellation error estimate
 
-if use_fft
+% norm for cancellation error estimate
+if adj_method
+    normf = norm(fj,2);
+else
+    normf = norm(c,2);
+end
+
+if use_fft && add_shifted_sine
     [a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
     d = [a0;a1;b_coeffs];
 else
@@ -183,9 +190,18 @@ for i = 1:M
         pmod(2:end) = exp(1i*kmod*a).*pmodk;
     end
     pmodmat(:,i) = pmod;
-
-    % plain non-adj method, standard
-    I = real(sum(c.*p));
+    
+    if adj_method
+        % adj method, standard
+        p_shifted = ifftshift(p); % shifts from 0-freq-idx to Matlab std
+        w = fft(p_shifted)/n; % target specific special quadrature weights
+        stdv = fj.*w; % vector to be summed
+    else
+        % plain non-adj method, standard
+        stdv = c.*p;
+        w = p;
+    end
+    I = real(sum(stdv));
     errv(i) = abs((I-Ie)/Ie);
 
     % plain non-adj method, modified
@@ -193,7 +209,7 @@ for i = 1:M
     errmodv(i) = abs((Imod-Ie)/Ie);
 
     % cancellation error estimate
-    errestv(i) = cond_sum(normc,p,c.*p); % cond nbr of summation operation
+    errestv(i) = cond_sum(normf,w,stdv); % cond nbr of summation operation
 
     % print vectors
     if i == 1
@@ -223,6 +239,7 @@ corr_coeff = 'interp'; % determines how to correct the first modified coeff
 use_vpa = 0; % use vpa for certain calculations
 use_integral = 0; % compute basis integrals using "integral" instead of rec
 use_fft = 1; % compute modified basis coefficients via FFT
+adj_method = 1; % solve non-shifted using adjoint method
 
 switch test_no
     case 1
@@ -244,7 +261,7 @@ switch test_no
 end
 
 [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod,] = test_circle_basis_corr(...
-    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft);
+    m,l,sigma,alpha,delta,a,bv,n,corr_coeff,add_shifted_sine,use_vpa,use_integral,use_fft,adj_method);
 
 % prepare plots
 M = numel(bv);
