@@ -34,8 +34,15 @@ if nargin == 0, test_transform_coeffs; return; end
 
 N = length(c_coeffs); % total number of standard Fourier modes
 
+% constants
 w = exp(1i*a); % exponential factors for shift a
 winv = conj(w);
+alpha1 = 2*w;
+alpha2 = -w*w;
+alpha3 = -4*w;
+alphainv1 = 2*winv;
+alphainv2 = -winv*winv;
+alphainv3 = -4*winv;
 
 b_coeffs = zeros(N-2,1); % modified basis coefficients output vector
 
@@ -49,19 +56,17 @@ else
 end
 
 % positive modes
-b_coeffs(N-2) = -4*w*c_coeffs(N);
-b_coeffs(N-3) = 4*w*(0.5*b_coeffs(N-2) - c_coeffs(N-1));
+b_coeffs(N-2) = alpha3*c_coeffs(N);
+b_coeffs(N-3) = alpha1*b_coeffs(N-2) + alpha3*c_coeffs(N-1);
 for j = (N-4):-1:(ind0_b+1) % from high to low
-    kc_ind = j+2; % map b-index to correct c_coeffs index
-    b_coeffs(j) = 4*w*(0.5*b_coeffs(j+1) - 0.25*w*b_coeffs(j+2) - c_coeffs(kc_ind));
+    b_coeffs(j) = alpha1*b_coeffs(j+1) + alpha2*b_coeffs(j+2) + alpha3*c_coeffs(j+2);
 end
 
 % negative modes
-b_coeffs(1) = -4*winv*c_coeffs(1);
-b_coeffs(2) = 4*winv*(0.5*b_coeffs(1) - c_coeffs(2));
+b_coeffs(1) = alphainv3*c_coeffs(1);
+b_coeffs(2) = alphainv1*b_coeffs(1) + alphainv3*c_coeffs(2);
 for j = 3:(ind0_b-1) % from low to high
-    kc_ind = j;
-    b_coeffs(j) = 4*winv*(0.5*b_coeffs(j-1) - 0.25*winv*b_coeffs(j-2) - c_coeffs(kc_ind));
+    b_coeffs(j) = alphainv1*b_coeffs(j-1) + alphainv2*b_coeffs(j-2) + alphainv3*c_coeffs(j);
 end
 
 % helper variables for a0, a1 and b0
