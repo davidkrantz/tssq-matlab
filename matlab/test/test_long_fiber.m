@@ -95,7 +95,6 @@ fprintf('* Discretizing, tol=%.1e\n', tol)
 [tj, wj, npan, edges] = adaptive_panelization(s, nquad, tol);
 fprintf('nquad=%d, npan=%d\n', nquad, npan);
 xj = x(tj); yj = y(tj); zj = z(tj);
-xpj = xp(tj); ypj = yp(tj); zpj = zp(tj);
 sj = s(tj);
 f1j = f1(tj); f2j = f2(tj); f3j = f3(tj);
 
@@ -494,17 +493,6 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
                                 end
                             end
                         end
-    
-    %                     err1R3 = abs(I1R3-IR35(1,1))/abs(I1R3);
-    %                     err2R3 = abs(I2R3-IR35(2,1))/abs(I2R3);
-    %                     err3R3 = abs(I3R3-IR35(3,1))/abs(I3R3);
-    %                     err1R5 = abs(I1R5-IR35(1,2))/abs(I1R5);
-    %                     err2R5 = abs(I2R5-IR35(2,2))/abs(I2R5);
-    %                     err3R5 = abs(I3R5-IR35(3,2))/abs(I3R5);
-    %                     if err1R3 > 1e-5 || err2R3 > 1e-5 || err3R3 > 1e-5 || err1R5 > 1e-5 || err2R5 > 1e-5 || err3R5 > 1e-5
-    %                         keyboard;
-    %                     end
-    
                         I1R3sh = IR35(1,1);
                         I2R3sh = IR35(2,1);
                         I3R3sh = IR35(3,1);

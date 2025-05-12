@@ -44,8 +44,8 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_cor
 %
 % AUTHOR: David Krantz (davkra@kth.se), April 2025
 %
-% Based on an idea by Alex Barnett. Some code has been taken from the 
-% GitHub repository https://github.com/ludvigak/linequad
+% NOTE: Based on an idea by Alex Barnett. Some code has been taken from the 
+%   GitHub repository https://github.com/ludvigak/linequad
 
 if nargin == 0, test_corrections; return; end
 
