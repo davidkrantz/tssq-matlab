@@ -237,6 +237,13 @@ for i = 1:M
     end
 end
 
+
+% condition number of Vandermonde matrices, just for testing
+V = ones(n,n); for k=2:n, V(:,k) = V(:,k-1).*(tj-0); end
+Vsh = ones(n,n); for k=2:n, Vsh(:,k) = Vsh(:,k-1).*(tj-sh); end
+fprintf('cond nbr of unshifted Vandermonde matrix: %.14e\n',cond(V));
+fprintf('cond nbr of shifted Vandermonde matrix: %.14e\n',cond(Vsh));
+
 end
 
 function test_corrections
@@ -288,6 +295,10 @@ h = @(t) t-a+delta;
 f = @(t) sigma(t).*h(t).^r;
 fj = f(tj);
 
+% prints
+fprintf('max relative error standard basis: %.14e\n', max(errv));
+fprintf('max relative error modified basis: %.14e\n', max(errshv));
+
 % plots
 close all;
 
@@ -304,10 +315,22 @@ ylabel('rel err');
 title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa ', fix Q_1^1=' num2str(~no_hp_switch), ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
 
 figure;
-loglog(abs(bv),irefv,'.');
+loglog(abs(bv),vecnorm(c.*pmat,inf,1),'.');
+hold on;
+loglog(abs(bv),vecnorm(d.*pshmat,inf,1),'o');
+loglog(abs(bv),abs(irefv),'.');
+loglog(abs(bv),1./abs(bv).^2);
+if m == 5
+    loglog(abs(bv),1./abs(bv).^4);
+end
 grid on;
+if m == 5
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)','O(1/b^4)');
+else
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)');
+end
 xlabel('b');
-ylabel('ref intval, I');
+ylabel('value');
 title(['m=' num2str(m) ', delta=' num2str(delta)]);
 
 figure;

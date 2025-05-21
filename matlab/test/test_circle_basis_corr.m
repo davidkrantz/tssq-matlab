@@ -46,6 +46,8 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 
 if nargin == 0, test_corrections; return; end
 
+a = mod(a,2*pi); % make sure real(t0) in [0,2*pi)
+
 % numerator
 h = @(t) sin(t-a)+delta; % function small at t=a
 f = @(t) sigma(t).*h(t).^alpha; % modified "density", RR^T style vanishing near t=a
@@ -193,7 +195,7 @@ for i = 1:M
     
     if adj_method
         % adj method, standard
-        p_shifted = ifftshift(p); % shifts from 0-freq-idx to Matlab std
+        p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
         w = fft(p_shifted)/n; % target specific special quadrature weights
         stdv = fj.*w; % vector to be summed
     else
@@ -290,10 +292,22 @@ ylabel('rel err');
 title(['m=' num2str(m) ', vpa=' num2str(use_vpa) ', corrcoeff=' corr_coeff ', delta=' num2str(delta)]);
 
 figure;
+loglog(abs(bv),vecnorm(c.*pmat,inf,1),'.');
+hold on;
+loglog(abs(bv),vecnorm(d.*pmodmat,inf,1),'o');
 loglog(abs(bv),abs(irefv),'.');
+loglog(abs(bv),1./abs(bv).^2);
+if m == 5
+    loglog(abs(bv),1./abs(bv).^4);
+end
 grid on;
+if m == 5
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)','O(1/b^4)');
+else
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)');
+end
 xlabel('b');
-ylabel('abs ivalref, |I|');
+ylabel('value');
 title(['m=' num2str(m) ', delta=' num2str(delta)]);
 
 figure;
