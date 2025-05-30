@@ -1,6 +1,5 @@
 function test_periodic_squiggle(varargin)
 
-clc
 clear all;
 format long;
 
@@ -344,22 +343,28 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
             I3R5 = sum(tmp3R5);
             I1R3sh = I1R3; I2R3sh = I2R3; I3R3sh = I3R3;
             I1R5sh = I1R5; I2R5sh = I2R5; I3R5sh = I3R5;
-            w3 = all_w3(:,i);
-            w5 = all_w5(:,i);
-            normw3 = norm(w3,2);
-            normw5 = norm(w5,2);
+%             w3 = all_w3(:,i);
+%             w5 = all_w5(:,i);
+%             normw3 = norm(w3,2);
+%             normw5 = norm(w5,2);
             toln = tol;
             % estimate for 1/R^5
             corrR35 = zeros(3,2);
-            corrR35(1,2) = cond_sum(normw5,g1R5,I1R5);
-            corrR35(2,2) = cond_sum(normw5,g2R5,I2R5);
-            corrR35(3,2) = cond_sum(normw5,g3R5,I3R5);
+%             corrR35(1,2) = cond_sum(normw5,g1R5,I1R5);
+%             corrR35(2,2) = cond_sum(normw5,g2R5,I2R5);
+%             corrR35(3,2) = cond_sum(normw5,g3R5,I3R5);
+            corrR35(1,2) = sum(abs(tmp1R5))/abs(I1R5)*eps*nquad;
+            corrR35(2,2) = sum(abs(tmp2R5))/abs(I2R5)*eps*nquad;
+            corrR35(3,2) = sum(abs(tmp3R5))/abs(I3R5)*eps*nquad;
             corrR5 = sum(corrR35(:,2) > toln) > 0;
             if ~corrR5
                 % 1/R^5 ok, now check 1/R^3
-                corrR35(1,1) = cond_sum(normw3,g1R3,I1R3);
-                corrR35(2,1) = cond_sum(normw3,g2R3,I2R3);
-                corrR35(3,1) = cond_sum(normw3,g3R3,I3R3);
+%                 corrR35(1,1) = cond_sum(normw3,g1R3,I1R3);
+%                 corrR35(2,1) = cond_sum(normw3,g2R3,I2R3);
+%                 corrR35(3,1) = cond_sum(normw3,g3R3,I3R3);
+                corrR35(1,1) = sum(abs(tmp1R3))/abs(I1R3)*eps*nquad;
+                corrR35(2,1) = sum(abs(tmp2R3))/abs(I2R3)*eps*nquad;
+                corrR35(3,1) = sum(abs(tmp3R3))/abs(I3R3)*eps*nquad;
                 corrR3 = sum(corrR35(:,1) > toln) > 0;
             else
                 % 1/R^5 bad, assume same corr needed for 1/R^3
@@ -436,7 +441,7 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
    
                 for ii = 1:3
                     for jj = 1:2
-                        corr = corrR35(ii,jj);
+                        corr = corrR35(ii,jj) > toln;
                         if ~isnan(corr) && corr
                             g = GR35(((ii-1)*nquad+1):ii*nquad,jj);
                             h = g.*tdist.^(2*jj+1); % to expand in modified Fourier basis

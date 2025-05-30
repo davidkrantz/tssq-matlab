@@ -407,11 +407,11 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
                 I1R3sh = I1R3; I2R3sh = I2R3; I3R3sh = I3R3;
                 I1R5sh = I1R5; I2R5sh = I2R5; I3R5sh = I3R5;
                 v0 = all_roots(i); % root having real part in [-1,1]
-                if real(v0) <= 1.1
+                if abs(real(v0)) <= 1.1
                     w3 = all_w3(:,i);
                     w5 = all_w5(:,i);
-                    normw3 = norm(w3,2);
-                    normw5 = norm(w5,2);
+                    normw3 = norm(w3,inf);
+                    normw5 = norm(w5,inf);
                     toln = tol;
                     % estimate for 1/R^5
                     corrR35 = false(3,2);
@@ -421,15 +421,18 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,corr
                     corrR35(1,2) = cond_sum(normw5,g1R5,I1R5) > toln;
                     corrR35(2,2) = cond_sum(normw5,g2R5,I2R5) > toln;
                     corrR35(3,2) = cond_sum(normw5,g3R5,I3R5) > toln;
+%                     corrR35(1,2) = sum(abs(tmp1R5))/abs(I1R5)*eps*nquad/2*sum(wjpan)/tsc^5 > toln;
+%                     corrR35(2,2) = sum(abs(tmp2R5))/abs(I2R5)*eps*nquad/2*sum(wjpan)/tsc^5 > toln;
+%                     corrR35(3,2) = sum(abs(tmp3R5))/abs(I3R5)*eps*nquad/2*sum(wjpan)/tsc^5 > toln;
                     corrR5 = sum(corrR35(:,2)) > 0;
                     if ~corrR5
                         % 1/R^5 ok, now check 1/R^3
     %                     corrR35(1,1) = cancellation_error_estimate(I1R3,tmp1R3) > tol;
     %                     corrR35(2,1) = cancellation_error_estimate(I2R3,tmp2R3) > tol;
     %                     corrR35(3,1) = cancellation_error_estimate(I3R3,tmp3R3) > tol;
-                        corrR35(1,2) = cond_sum(normw3,g1R3,I1R3) > toln;
-                        corrR35(2,2) = cond_sum(normw3,g2R3,I2R3) > toln;
-                        corrR35(3,2) = cond_sum(normw3,g3R3,I3R3) > toln;
+                        corrR35(1,1) = cond_sum(normw3,g1R3,I1R3) > toln;
+                        corrR35(2,1) = cond_sum(normw3,g2R3,I2R3) > toln;
+                        corrR35(3,1) = cond_sum(normw3,g3R3,I3R3) > toln;
                         corrR3 = logical(sum(corrR35(:,1)));
                     else
                         % 1/R^5 bad, assume same corr needed for 1/R^3
@@ -548,7 +551,7 @@ est = kappasum*eps*n;
 end
 
 function est = cond_sum(normw,f,wf)
-kappa = normw * norm(f,2) / abs(sum(wf));
+kappa = normw * norm(f,inf) / abs(sum(wf));
 est = eps*kappa;
 end
 

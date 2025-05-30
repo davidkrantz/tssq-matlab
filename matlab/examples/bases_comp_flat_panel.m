@@ -172,7 +172,7 @@ set(groot,'defaultAxesTickLabelInterpreter','latex');
 set(groot,'defaulttextinterpreter','latex');
 set(groot,'defaultLegendInterpreter','latex');
 
-savefig = 1; % saves figures to folder matlab/images
+savefig = 0; % saves figures to folder matlab/images
 
 adj_method = 0; % solve non-shifted using adjoint method
 corr_coeff = 1; % correct first poly coeff by exact value
