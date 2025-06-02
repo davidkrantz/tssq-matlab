@@ -71,7 +71,7 @@ idxclosesest = tmpidx(idxclose);
 
 % use closest point on curve as real part of initial guess
 all_tinits = zeros(ntar,1);
-all_tinits(idxclose) = tj(idxclosesest) + 0.1*1i; % add small imaginary part
+all_tinits(idxclose) = tj(idxclosesest) + dist(idxclose)*1i; % add small imaginary part
 
 % run root-finder
 all_roots = complex(zeros(ntar,1));
