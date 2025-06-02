@@ -72,7 +72,7 @@ disp('* Adaptive quadrature')
     X, Y, Z, nquad_panel, slender_eps, Hlim);
 
 % Global trapezoidal discretization
-[d2, y2, z2, xp2, yp2, zp2, ~, ~, ~] = starfish3D2(0.3,narms,1);
+[d2, y2, z2, xp2, yp2, zp2, ~, ~, ~] = starfish3D_2pi(0.3,narms,1);
 s2 = @(t) sqrt(xp2(t).^2 + yp2(t).^2 + zp2(t).^2);
 f12 = @(t) d2(t)/(2*pi);
 f22 = @(t) y2(t)/(2*pi);
@@ -457,81 +457,4 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
     stats.time_weights = time_weights;
     stats.time_ker_near = time_ker_near;
     stats.time_coeffs = time_coeffs;
-end
-
-function [x, y, z, xp, yp, zp, xpp, ypp, zpp] = starfish3D(amplitude, n_arms, radius)
-if nargin < 3
-    radius = 1.0;
-end
-
-% Smooth vertical wobble parameters
-wobble_amp = 2; % vertical amplitude
-wobble_freq = 1; % number of z-oscillations around the loop
-
-% Position functions
-x = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)')) .* cos(2*pi*t(:)');
-y = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)')) .* sin(2*pi*t(:)');
-z = @(t) wobble_amp * sin(wobble_freq * 2*pi*t(:)');  % small 3D vertical variation
-
-% First derivatives
-common = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)'));
-dcommon = @(t) -radius * amplitude * n_arms * sin(n_arms * 2*pi*t(:)');
-
-xp = @(t) dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
-yp = @(t) dcommon(t(:)') .* sin(2*pi*t(:)') + common(t(:)') .* cos(2*pi*t(:)');
-zp = @(t) wobble_amp * wobble_freq * cos(wobble_freq * 2*pi*t(:)');
-
-% Second derivatives
-ddcommon = @(t) -radius * amplitude * n_arms^2 * cos(n_arms * 2*pi*t(:)');
-
-xpp = @(t) ddcommon(t(:)') .* cos(2*pi*t(:)') - 2 * dcommon(t(:)') .* sin(2*pi*t(:)') - common(t(:)') .* cos(2*pi*t(:)');
-ypp = @(t) ddcommon(t(:)') .* sin(2*pi*t(:)') + 2 * dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
-zpp = @(t) -wobble_amp * wobble_freq^2 * sin(wobble_freq * 2*pi*t(:)');
-end
-
-function [x, y, z, xp, yp, zp, xpp, ypp, zpp] = starfish3D2(amplitude, n_arms, radius)
-if nargin < 3
-    radius = 1.0;
-end
-
-% Smooth vertical wobble parameters
-wobble_amp = 2; % vertical amplitude
-wobble_freq = 1; % number of z-oscillations around the loop
-
-% Position functions
-x = @(t) radius * (1 + amplitude * cos(n_arms * t(:)')) .* cos(t(:)');
-y = @(t) radius * (1 + amplitude * cos(n_arms * t(:)')) .* sin(t(:)');
-z = @(t) wobble_amp * sin(wobble_freq * t(:)');  % small 3D vertical variation
-
-% First derivatives
-common = @(t) radius * (1 + amplitude * cos(n_arms * t(:)'));
-dcommon = @(t) -radius * amplitude * n_arms * sin(n_arms * t(:)');
-
-xp = @(t) dcommon(t(:)') .* cos(t(:)') - common(t(:)') .* sin(t(:)');
-yp = @(t) dcommon(t(:)') .* sin(t(:)') + common(t(:)') .* cos(t(:)');
-zp = @(t) wobble_amp * wobble_freq * cos(wobble_freq * t(:)');
-
-% Second derivatives
-ddcommon = @(t) -radius * amplitude * n_arms^2 * cos(n_arms * t(:)');
-
-xpp = @(t) ddcommon(t(:)') .* cos(t(:)') - 2 * dcommon(t(:)') .* sin(t(:)') - common(t(:)') .* cos(t(:)');
-ypp = @(t) ddcommon(t(:)') .* sin(t(:)') + 2 * dcommon(t(:)') .* cos(t(:)') - common(t(:)') .* sin(t(:)');
-zpp = @(t) -wobble_amp * wobble_freq^2 * sin(wobble_freq * t(:)');
-end
-
-function [tj,wj] = adaptive_global_discretization(s,tol)
-n = 4;
-res = tol+1;
-itr = 0;
-maxitr = 10;
-while res > tol && itr < maxitr
-    tj = linspace(0,2*pi,n+1).'; tj(end) = []; % periodic grid in [0,2*pi)
-    %tj = linspace(0,1,n+1).'; tj(end) = []; % periodic grid in [0,1)
-    sj = s(tj);
-    c = fftshift(fft(sj))/n;
-    res = max(abs(c(end-1:end))/max(abs(c)));
-    n = 2*n;
-    itr = itr+1;
-end
-wj = (tj(2)-tj(1))*ones(n/2,1);
 end

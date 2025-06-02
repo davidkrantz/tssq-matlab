@@ -1,0 +1,30 @@
+function [x, y, z, xp, yp, zp, xpp, ypp, zpp] = starfish3D(amplitude, n_arms, radius)
+% t in [0,1)
+if nargin < 3
+    radius = 1.0;
+end
+
+% Smooth vertical wobble parameters
+wobble_amp = 2; % vertical amplitude
+wobble_freq = 1; % number of z-oscillations around the loop
+
+% Position functions
+x = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)')) .* cos(2*pi*t(:)');
+y = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)')) .* sin(2*pi*t(:)');
+z = @(t) wobble_amp * sin(wobble_freq * 2*pi*t(:)');  % small 3D vertical variation
+
+% First derivatives
+common = @(t) radius * (1 + amplitude * cos(n_arms * 2*pi*t(:)'));
+dcommon = @(t) -radius * amplitude * n_arms * sin(n_arms * 2*pi*t(:)');
+
+xp = @(t) dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
+yp = @(t) dcommon(t(:)') .* sin(2*pi*t(:)') + common(t(:)') .* cos(2*pi*t(:)');
+zp = @(t) wobble_amp * wobble_freq * cos(wobble_freq * 2*pi*t(:)');
+
+% Second derivatives
+ddcommon = @(t) -radius * amplitude * n_arms^2 * cos(n_arms * 2*pi*t(:)');
+
+xpp = @(t) ddcommon(t(:)') .* cos(2*pi*t(:)') - 2 * dcommon(t(:)') .* sin(2*pi*t(:)') - common(t(:)') .* cos(2*pi*t(:)');
+ypp = @(t) ddcommon(t(:)') .* sin(2*pi*t(:)') + 2 * dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
+zpp = @(t) -wobble_amp * wobble_freq^2 * sin(wobble_freq * 2*pi*t(:)');
+end
