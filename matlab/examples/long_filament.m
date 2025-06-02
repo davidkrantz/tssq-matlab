@@ -1,6 +1,6 @@
 % Evaluate Stokes slender body potential from closed-loop squiggle curve.
-% Compared the standard and modified SSQ methods, with reference values
-% obtained from an adaptive quadrature method.
+% Compared the standard and modified SSQ (non-periodic) methods, with 
+% reference values obtained from an adaptive quadrature method.
 %
 % AUTHOR: David Krantz (davkra@kth.se), May 2025
 %
@@ -37,7 +37,7 @@ f2 = @(t) y(t);
 f3 = @(t) z(t);
 
 % all targs near curve, in random normal directions a fixed dist away
-Ne = 5e3;  % # targs
+Ne = 5e1;  % # targs
 t = rand(1,Ne);
 v = randn(3,Ne); utang = [xp(t);yp(t);zp(t)]./s(t); % sloppy unit tangents
 vdotutang = sum(v.*utang,1); v = v - utang.*vdotutang; % orthog v against the tangent
@@ -405,13 +405,17 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
 
                         time_mod_weights = time_mod_weights + toc(ctic);
 
+                        tdistMat = zeros(nquad2,2);
+                        tmp = tdist.^(2*1+1);
+                        tdistMat(:,1) = tmp;
+                        tdistMat(:,2) = tmp.*tdist.*tdist;
                         for ii = 1:3
                             for jj = 1:2
                                 corr = errestR35(ii,jj) > tol;
                                 if corr
                                     dtic = tic();
                                     g = GR35(((ii-1)*nquad2+1):ii*nquad2,jj);
-                                    h = g.*tdist.^(2*jj+1); % to expand in shifted monomial basis
+                                    h = g.*tdistMat(:,jj); % to expand in shifted monomial basis
                                     htic = tic();
                                     if use_bjorck_pereyra
                                         dcoeff = dvand(alpha,h); % Björck-Pereyra

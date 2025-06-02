@@ -2,6 +2,7 @@ function test_periodic_squiggle(varargin)
 
 clear all;
 format long;
+rng(0);
 
 SAVEPLOTS = false;
 
@@ -343,10 +344,10 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
             I3R5 = sum(tmp3R5);
             I1R3sh = I1R3; I2R3sh = I2R3; I3R3sh = I3R3;
             I1R5sh = I1R5; I2R5sh = I2R5; I3R5sh = I3R5;
-%             w3 = all_w3(:,i);
-%             w5 = all_w5(:,i);
-%             normw3 = norm(w3,2);
-%             normw5 = norm(w5,2);
+            w3 = all_w3(:,i);
+            w5 = all_w5(:,i);
+            normw3 = norm(w3,inf);
+            normw5 = norm(w5,inf);
             toln = tol;
             % estimate for 1/R^5
             corrR35 = zeros(3,2);
