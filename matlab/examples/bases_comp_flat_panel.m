@@ -61,7 +61,9 @@ if use_bjorck_pereyra
     c = dvand(tj,fj);
 else
     V = ones(n,n); for k=2:n, V(:,k) = V(:,k-1).*(tj-0); end % Vandermonde not transp
-    c = V\fj(:);
+    [Q,R] = qr(V);
+    [Qt,Rt] = qr(V.');
+    c = R\(Q'*fj);
 end
 
 % basis coefficients, shifted, i.e. d_k coeffs of f
@@ -69,11 +71,13 @@ if use_bjorck_pereyra
     d = dvand(tj-sh,fj);
 else
     Vsh = ones(n,n); for k=2:n, Vsh(:,k) = Vsh(:,k-1).*(tj-sh); end
-    d = Vsh\fj(:);
+    [Qsh,Rsh] = qr(Vsh);
+    [Qsht,Rsht] = qr(Vsh.');
+    d = Rsh\(Qsh'*fj);
 end
 
 % correct first coefficient in shifted basis
-if corr_coeff
+if corr_coeff && abs(a) <= 1
     sigma_interp = bclag_interp(sj,tj,wbary,sh); % barycentric Lagrange interp of layer dens at t=a
     d(1) = sigma_interp*(h(sh)^r+delta); % eval remaining part of kernel analytically
 end
@@ -102,8 +106,37 @@ for i = 1:M
     irefv(i) = Ie;
 
     % basis integrals
-    [p1, p3, p5] = rsqrt_pow_integrals(t0,n); % recurrences
-    [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0,n); % w shift
+    if a < 1.1
+        [p1, p3, p5] = rsqrt_pow_integrals(t0,n); % recurrences
+        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0,n); % w shift
+    else
+        warning off;
+        if m == 1
+            p1 = zeros(n,1);
+            p1sh = zeros(n,1);
+            for ii = 1:n
+                p1(ii) = integral(@(t) t.^(ii-1)./abs(t-t0).^1,-1,1,'reltol', 0, 'abstol', 0);
+                p1sh(ii) = integral(@(t) (t-sh).^(ii-1)./abs(t-t0).^1,-1,1,'reltol', 0, 'abstol', 0);
+            end
+        elseif m == 3
+            p3 = zeros(n,1);
+            p3sh = zeros(n,1);
+            for ii = 1:n
+                p3(ii) = integral(@(t) t.^(ii-1)./abs(t-t0).^3,-1,1,'reltol', 0, 'abstol', 0);
+                p3sh(ii) = integral(@(t) (t-sh).^(ii-1)./abs(t-t0).^3,-1,1,'reltol', 0, 'abstol', 0);
+            end
+        elseif m == 5
+            p5 = zeros(n,1);
+            p5sh = zeros(n,1);
+            for ii = 1:n
+                p5(ii) = integral(@(t) t.^(ii-1)./abs(t-t0).^5,-1,1,'reltol', 0, 'abstol', 0);
+                p5sh(ii) = integral(@(t) (t-sh).^(ii-1)./abs(t-t0).^5,-1,1,'reltol', 0, 'abstol', 0);
+            end
+        else
+            error('invalid value m');
+        end
+        warning on;
+    end
     if m == 1
         p = p1;
         psh = p1sh;
@@ -125,7 +158,7 @@ for i = 1:M
         if use_bjorck_pereyra
             lam = pvand(tj,p);
         else
-            lam = V'\p;
+            lam = Rt\(Qt'*p);
         end
         I = sum(lam.*fj);
     else
@@ -135,7 +168,16 @@ for i = 1:M
     errv(i) = abs((I-Ie)/Ie);
 
     % plain non-adj method, shifted
-    Ish = sum(d.*psh);
+    if adj_method
+        if use_bjorck_pereyra
+            lamsh = pvand(tj-sh,psh);
+        else
+            lamsh = Rsht\(Qsht'*psh);
+        end
+        Ish = sum(lamsh.*fj);
+    else
+        Ish = sum(d.*psh);
+    end
     errshv(i) = abs((Ish-Ie)/Ie);
     
     % various estimation methods
@@ -147,6 +189,9 @@ for i = 1:M
         elseif errest_alt == 2
             % condition number of dot product using Euclidean norm
             kappa = norm(lam,inf)*norm(fj,inf)/abs(I);
+        elseif errest_alt == 3
+            % condition number of dot product using Euclidean norm
+            kappa = norm(lamsh,inf)*norm(fj,inf)/abs(Ish);
         end
     else
         if errest_alt == 1
@@ -156,6 +201,9 @@ for i = 1:M
         elseif errest_alt == 2
             % condition number of dot product using Euclidean norm
             kappa = norm(c,inf)*norm(p,inf)/abs(I);
+        elseif errest_alt == 3
+            % condition number of dot product using Euclidean norm
+            kappa = norm(d,inf)*norm(psh,inf)/abs(Ish);
         end
     end
     % final cancellation error estimate
@@ -273,7 +321,7 @@ loglog(abs(bv),1./abs(bv).^4,'Color','k','Marker','none','LineStyle','--','LineW
 grid on;
 legend('$\|\mathbf{c}\odot\mathbf{P}_m\|_{\infty}$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}_m\|_{\infty}$','$|I_m|$','fontsize',FS,'interpreter','latex');
 xlabel('Distance to $\Gamma$, $b$','fontsize',FS,'interpreter','latex');
-%ylabel('Value','fontsize',FS,'interpreter','latex');
+ylabel('Value','fontsize',FS,'interpreter','latex');
 xticks([1e-5 1e-4 1e-3 1e-2 1e-1 1e-0]);
 ylim([1e-2,1e20]);
 yticks([1e0 1e5 1e10 1e15 1e20]);
