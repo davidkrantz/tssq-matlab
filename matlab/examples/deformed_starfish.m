@@ -333,6 +333,7 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
                     r = exp(-abs(b));
                     tdist = abs(exp(1i*tj)-exp(1i*t0));
                     estd = exp(1i*kstd.'*a);
+                    estdik = 1i*kstd.'.*estd;
                     emod = exp(1i*kmod*a);
                     mu1 = all_mu1(:,i);
                     mu3 = all_mu3(:,i);
@@ -388,6 +389,7 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
                     uR35a = [u1R3a, u1R5a;
                              u2R3a, u2R5a;
                              u3R3a, u3R5a];
+                    sin2fac = sin((tj-a)./2).^2;
        
                     tdistMat = zeros(nquad,2);
                     tmp = tdist.^(2*1+1);
@@ -399,13 +401,20 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
                             if ~isnan(corr) && corr
                                 g = GR35(((ii-1)*nquad+1):ii*nquad,jj);
                                 h = g.*tdistMat(:,jj); % to expand in modified Fourier basis
-                                ccoeff = fftshift(fft(h))/nquad;
+                                ccoeff = fftshift(fft(h))/nquad; % std Fourier coefficients
+                                % compute modified Fourier coeffs
                                 btic = tic();
-                                [a0,a1,bcoeff] = fourier2modcoeffs(ccoeff,a); % map c_k --> (a_0,a_1,b_k)
+                                % alt 1: transform coefficients (slow)
+%                                 [a0,a1,bcoeff] = fourier2modcoeffs(ccoeff,a); % map c_k --> (a_0,a_1,b_k)
+%                                 d1coeff = sa*uR35a(ii,jj)*tdista^(2*jj+1); % correction to d(1)
+%                                 dcoeff = [d1coeff;a1;bcoeff];
+                                % alt 2: interpolate and FFT (faster, ~2x)
+                                a0 = sa*uR35a(ii,jj)*tdista^(2*jj+1);
+                                a1 = real(estdik*ccoeff);
+                                gj = (h-a0-a1*sin(tj-a))./sin2fac;
+                                bk = fftshift(fft(gj)/nquad);
+                                dcoeff = [a0;a1;bk(2:end-1)];
                                 time_coeffs =  time_coeffs + toc(btic);
-                                dcoeff = [a0;a1;bcoeff];
-                                d1coeff = sa*uR35a(ii,jj)*tdista^(2*jj+1); % correction to d(1)
-                                dcoeff(1) = d1coeff;
                                 if jj == 1 && correct_R3
                                     IR35(ii,jj) = real(sum(dcoeff.*p3mod));
                                 elseif jj == 2 && correct_R5
