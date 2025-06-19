@@ -18,7 +18,7 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %   l                - number of equidistant nodes on [0,2*pi) to sample f at
 %   sigma            - function handle for the layer density
 %   alpha            - vanishing order of h(t) at t = a, i.e. h(t)^alpha
-%   delta            - small offset for location of vanishing, h(t) = sin((t-a)/2) + delta
+%   delta            - small offset for location of vanishing
 %   a                - real part of singularity location t0
 %   bv               - vector of imaginary parts of singularities t0 = a + ib
 %   corr_coeff       - string, 'exact'/'interp' for exact or Fourier interp
@@ -49,8 +49,8 @@ if nargin == 0, test_corrections; return; end
 a = mod(a,2*pi); % make sure real(t0) in [0,2*pi)
 
 % numerator
-h = @(t) sin(t-a)+delta; % function small at t=a
-f = @(t) sigma(t).*h(t).^alpha; % modified "density", RR^T style vanishing near t=a
+h = @(t) sin(t-a); % function small at t=a
+f = @(t) sigma(t).*(h(t).^alpha+delta); % modified "density", RR^T style vanishing near t=a
 
 tj = linspace(0,2*pi,n+1).'; tj(end) = []; % nodes in [0,2*pi)
 
@@ -74,7 +74,14 @@ else
 end
 
 if use_fft && add_shifted_sine
-    [a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
+    %[a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
+    sjk = fftshift(fft(sj))/n;
+    sigma_interp = real(exp(1i*kstd.'*a)*sjk);
+    a0 = sigma_interp*(h(a)^alpha+delta);
+    a1 = real(exp(1i*kstd'*a)*(1i*kstd.*c));
+    gj = (fj-a0-a1*sin(tj-a))./sin((tj-a)./2).^2;
+    bk = fftshift(fft(gj)/n);
+    b_coeffs = bk(2:end-1);
     d = [a0;a1;b_coeffs];
 else
     V = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
@@ -92,7 +99,7 @@ if strcmp(corr_coeff,'exact')
 elseif strcmp(corr_coeff,'interp')
     sjk = fftshift(fft(sj))/n; % Fourier coefficients of layer dens
     sigma_interp = real(exp(1i*kstd.'*a)*sjk); % interpolate layer dens at t=a
-    d(1) = sigma_interp*h(a)^alpha; % eval remaining part of kernel analytically
+    d(1) = sigma_interp*(h(a)^alpha+delta); % eval remaining part of kernel analytically
 end
 
 ell = @(r) -(4*r)./(1-r).^2; % function in basis integrals
@@ -247,7 +254,7 @@ switch test_no
     case 1
         n = 60; % nodes
         alpha = 2; % vanishing rate
-        delta = 1e-6; % offset
+        delta = 1e-8; % offset
         a = 4.23; % real of root
         bv = logspace(-5,0,20); % imag of root, "distance" to circle
         sigma = @(t) exp(cos(t)); % artifical layer density
@@ -268,8 +275,8 @@ end
 % prepare plots
 M = numel(bv);
 tj = linspace(0,2*pi,n+1).'; tj(end) = [];
-h = @(t) sin(t-a)+delta;
-f = @(t) sigma(t).*h(t).^alpha;
+h = @(t) sin(t-a);
+f = @(t) sigma(t).*(h(t).^alpha+delta);
 fj = f(tj);
 
 % prints
