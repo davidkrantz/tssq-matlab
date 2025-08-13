@@ -309,10 +309,10 @@ loglog(abs(bv),errshv,'o');
 loglog(abs(bv),errestv,'mx-');
 loglog(abs(bv),1e-16*1./abs(bv).^2);
 grid on;
-legend('non-shifted','shifted',['errest (type=' num2str(errest_alt) ')'],'O(1/b^2)');
+legend('non-shifted','shifted',['errest (type=' num2str(errest_alt) ')'],'$O(1/b^2)$','interpreter','latex');
 xlabel('b');
 ylabel('rel err');
-title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa ', fix Q_1^1=' num2str(~no_hp_switch), ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)]);
+title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa ', fix $Q_1^1$=' num2str(~no_hp_switch), ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)],'interpreter','latex');
 
 figure;
 loglog(abs(bv),vecnorm(c.*pmat,inf,1),'.');
@@ -325,9 +325,9 @@ if m == 5
 end
 grid on;
 if m == 5
-    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)','O(1/b^4)');
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','$O(1/b^2)$','$O(1/b^4)$','interpreter','latex');
 else
-    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)');
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','$O(1/b^2)$','interpreter','latex');
 end
 xlabel('b');
 ylabel('value');
@@ -388,13 +388,13 @@ grid on;
 xlim([1,n]);
 xlabel('k');
 ylabel('absolute value of coeff');
-legend('non-shifted: c_k','shifted: d_k');
+legend('non-shifted: ck','shifted: dk');
 
 figure;
 semilogy(1:n,abs(d)./max(abs(d)),'.');
 xlabel('Polynomial coefficient number');
 ylabel('Relative magnitude of coefficient');
-title(['Decay of shifted d_k coefficients, delta=' num2str(delta)]);
+title(['Decay of shifted dk coefficients, delta=' num2str(delta)]);
 grid on;
 xlim([1,n]);
 

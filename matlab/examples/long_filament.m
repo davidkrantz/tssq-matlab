@@ -15,16 +15,16 @@ rng(123);
 % Default setup
 slender_eps = 1e-3;
 savefig = 0;
-use_bjorck_pereyra = false;
+use_bjorck_pereyra = true;
 use_mod = true;
 
 UPSAMPLE = true; % Upsample before applying interpolatory quadrature
-nquad = 20;
+nquad = 16;
 rho = 3; % Interpolatory quadrature limit rule, rho=1 --> disable specquad
-Hlim = 1; % Adaptive quadrature distance rule 
+Hlim = 1; % Adaptive quadrature distance rule
 
 % Case setup
-tolv = [1e-6;1e-8;1e-10];
+tolv = [1e-4;1e-6];
 distv = fliplr(logspace(-8,-2,20)).';  % the dist of all pts from the curve
 
 % Setup fiber
@@ -37,7 +37,7 @@ f2 = @(t) y(t);
 f3 = @(t) z(t);
 
 % all targs near curve, in random normal directions a fixed dist away
-Ne = 5e1;  % # targs
+Ne = 1e3;  % # targs
 t = rand(1,Ne);
 v = randn(3,Ne); utang = [xp(t);yp(t);zp(t)]./s(t); % sloppy unit tangents
 vdotutang = sum(v.*utang,1); v = v - utang.*vdotutang; % orthog v against the tangent
@@ -63,6 +63,7 @@ fprintf('Discretization: nquad=%d, npan=%d\n', nquad_ref, npan_ref);
     f2(tj_ref), f3(tj_ref), X, Y, Z, nquad_ref, slender_eps, Hlim_ref);
 
 [adapquad_err_data,specquad_err_data,specquadsh_err_data] = deal(zeros(numel(distv),numel(tolv),3));
+[specquad_err_all,specquadsh_err_all] = deal(zeros(numel(tolv),numel(distv),Ne));
 stats = cell(numel(tolv),1);
 for ii = 1:numel(tolv)
     tol = tolv(ii);
@@ -106,6 +107,8 @@ for ii = 1:numel(tolv)
         adapquad_err_data(i,ii,3) = max(adquad_errmax(idx));
         specquad_err_data(i,ii,3) = max(specquad_errmax(idx));
         specquadsh_err_data(i,ii,3) = max(specquadsh_errmax(idx));
+        specquad_err_all(ii,i,:) = specquad_errmax(idx);
+        specquadsh_err_all(ii,i,:) = specquadsh_errmax(idx);
     end
 end
 
@@ -113,6 +116,7 @@ end
 for ii = 1:numel(tolv)
     epsilon = tolv(ii)*ones(size(distv));
     table(distv,epsilon,adapquad_err_data(:,ii,3),specquad_err_data(:,ii,3),specquadsh_err_data(:,ii,3))
+    table(distv,epsilon,specquadsh_err_data(:,ii,2),specquadsh_err_data(:,ii,2)<=tolv(ii))
 end
 
 % print timings
@@ -145,6 +149,7 @@ tmpcol = colororder; % default Matlab color ordering
 
 figure;
 figure;
+figure;
 
 [tj, wj, npan, edges] = adaptive_panelization(s, nquad, 1e-6);
 fprintf('nquad=%d, npan=%d\n', nquad, npan);
@@ -168,9 +173,9 @@ for ii = 1:numel(tolv)
     hold on;
     loglog(distv,specquadsh_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker',markerstr(ii),'LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 end
-loglog(distv,adapquad_err_data(:,ii),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
+loglog(distv,adapquad_err_data(:,ii,3),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
 loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
+%legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
 grid on;
 xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
 ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
@@ -178,26 +183,21 @@ xlim([distv(end),distv(1)]);
 xticks([1e-8 1e-6 1e-4 1e-2]);
 annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
 
-% fix this figure later
-% figure('DefaultAxesFontSize',FS);
-% markerstr = {'^','square','<'};
-% loglog(distv,specquad_errmaxmax(:,1),'Color',tmpcol(1,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-% hold on;
-% loglog(distv,specquadsh_errmaxmax(:,1),'Color',tmpcol(1,:),'Marker',markerstr(1),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(1,:));
-% loglog(distv,specquad_errmaxmax(:,2),'Color',tmpcol(2,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-% loglog(distv(1:14),specquadsh_errmaxmax(1:14,2),'Color',tmpcol(2,:),'Marker',markerstr(2),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(2,:));
-% loglog(distv(15:end),specquadsh_errmaxmax(15:end,2),'Color',tmpcol(2,:),'Marker',markerstr(2),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','none');
-% loglog(distv,specquad_errmaxmax(:,3),'Color',tmpcol(3,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-% loglog(distv(1:8),specquadsh_errmaxmax(1:8,3),'Color',tmpcol(3,:),'Marker',markerstr(3),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(3,:));
-% loglog(distv(9:end),specquadsh_errmaxmax(9:end,3),'Color',tmpcol(3,:),'Marker',markerstr(3),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','none');
-% loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-% legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
-% grid on;
-% xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
-% ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
-% xlim([distv(end),distv(1)]);
-% xticks([1e-8 1e-6 1e-4 1e-2]);
-% annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
+figure('DefaultAxesFontSize',FS);
+markerstr = {'^','square','<'};
+for ii = 1:numel(tolv)
+    loglog(distv,specquad_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(ii,:));
+    hold on;
+    loglog(distv,specquadsh_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker',markerstr(ii),'LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(ii,:));
+end
+loglog(distv,1e-10./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+legend('$\epsilon=10^{-4}$, std','$\epsilon=10^{-4}$, mod','$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','','fontsize',FS,'interpreter','latex');
+grid on;
+xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
+ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
+xlim([distv(end),distv(1)]);
+xticks([1e-8 1e-6 1e-4 1e-2]);
+annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
 
 d2 = [distv; flipud(distv)];
 falpha = 0.4;
@@ -212,26 +212,69 @@ for ii = 1:numel(tolv)
     f = fill(d2,[specquadsh_err_data(:,ii,1); flipud(specquadsh_err_data(:,ii,3))],'g','FaceAlpha',falpha);
     f.FaceColor = tmpcol(ii+1,:);
     f.EdgeColor = tmpcol(ii+1,:);
-    loglog(distv,adapquad_err_data(:,ii,2),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
-    %f = fill(d2,[adapquad_err_data(:,ii,1); flipud(adapquad_err_data(:,ii,3))],'k','FaceAlpha',falpha);
+    loglog(distv,adapquad_err_data(:,ii,3),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
     loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-    %legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
     grid on;
     xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
     ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
     xlim([min(distv),max(distv)]);
     yline(tolv(ii));
-    %xticks([1e-8 1e-6 1e-4 1e-2]);
-    %annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
     title(num2str(tolv(ii)));
 end
+
+err1 = reshape(log10(specquadsh_err_all(1,:,:)),numel(distv),Ne);
+err2 = reshape(log10(specquadsh_err_all(2,:,:)),numel(distv),Ne);
+
+xt = cell(numel(distv),1);
+for i = 1:numel(distv)
+    xt{i} = num2str(round(log10(distv(i)),1));
+end
+
+figure('DefaultAxesFontSize',FS);
+boxplot(fliplr(err1.'));
+hold on;
+plot(flipud(log10(specquad_err_data(:,1,3))),'Color',tmpcol(1,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+grid on;
+loglog(-log10(1./distv.^2)+10,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+%yl = yline(-4,'k-','$\epsilon=10^{-4}$','LineWidth',LW,'fontsize',FS,'Interpreter','latex');
+%yl.LabelHorizontalAlignment = 'left';
+ylim([-16,8]);
+xticklabels(gca,flipud(xt));
+legend('maximum, std: ($\epsilon=10^{-4}$)','slope $-2$','fontsize',FS-1,'interpreter','latex');
+xlabel(['$\log_{10}($','Distance to ', '$\Gamma)$'],'fontsize',FS,'interpreter','latex');
+ylabel(['$\log_{10}($','Relative error','$)$'],'fontsize',FS,'interpreter','latex');
+set(gca,'TickLabelInterpreter','latex');
+
+figure;
+
+figure('DefaultAxesFontSize',FS);
+boxplot(fliplr(err2.'));
+hold on;
+plot(flipud(log10(specquad_err_data(:,2,3))),'Color',tmpcol(2,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+grid on;
+loglog(-log10(1./distv.^2)+10,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+%yl = yline(-6,'k-','$\epsilon=10^{-6}$','LineWidth',LW,'fontsize',FS,'Interpreter','latex');
+%yl.LabelHorizontalAlignment = 'left';
+ylim([-16,8]);
+xticklabels(flipud(xt));
+legend('maximum, std: ($\epsilon=10^{-6}$)','slope $-2$','fontsize',FS-1,'interpreter','latex');
+xlabel(['$\log_{10}($','Distance to ', '$\Gamma)$'],'fontsize',FS,'interpreter','latex');
+ylabel(['$\log_{10}($','Relative error','$)$'],'fontsize',FS,'interpreter','latex');
+set(gca,'TickLabelInterpreter','latex');
+
+close(1);
+close(2);
+close(3);
+close(10);
 
 alignfigs;
 
 if savefig
     disp('saving figures...');
-    exportgraphics(figure(3),'figs/long_filament.pdf','Resolution',400);
-    exportgraphics(figure(5),'figs/long_filament_err_vs_dist.pdf','Resolution',400);
+    exportgraphics(figure(4),'figs/long_filament.pdf','Resolution',400);
+    exportgraphics(figure(6),'figs/long_filament_err_vs_dist.pdf','Resolution',400);
+    exportgraphics(figure(9),'figs/long_filament_err_vs_dist_boxplot1.pdf','Resolution',400);
+    exportgraphics(figure(11),'figs/long_filament_err_vs_dist_boxplot2.pdf','Resolution',400);
     disp('sucessfully saved figures');
 end
 
@@ -346,7 +389,7 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
                 I1R5sh = I1R5; I2R5sh = I2R5; I3R5sh = I3R5;
                 scale_fac = sum(wjpan)/2;
                 v0 = all_roots(i); % root having real part in [-1,1]
-                toln = tol;
+                toln = tol/npan;
                 if abs(real(v0)) <= 1.1 && use_mod
                     btic = tic();
                     w3 = all_w3(:,i);
@@ -362,8 +405,8 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
 %                     errestR35(2,2) = cond_sum(normw5,g2R5,I2R5)*scale_fac;
 %                     errestR35(3,2) = cond_sum(normw5,g3R5,I3R5)*scale_fac;
 %                     errestR35(1,2) = sum(abs(tmp1R5))/abs(I1R5)*eps*nquad2;
-%                     errestR35(2,2) = sum(abs(tmp2R5))/abs(I1R5)*eps*nquad2;
-%                     errestR35(3,2) = sum(abs(tmp3R5))/abs(I1R5)*eps*nquad2;
+%                     errestR35(2,2) = sum(abs(tmp2R5))/abs(I2R5)*eps*nquad2;
+%                     errestR35(3,2) = sum(abs(tmp3R5))/abs(I3R5)*eps*nquad2;
                     corrR5 = sum(errestR35(:,2) > toln) > 0;
                     if ~corrR5
                         % 1/R^5 ok, now check 1/R^3
@@ -374,8 +417,8 @@ function [specquad1,specquad2,specquad3,specquadsh1,specquadsh2,specquadsh3,canc
 %                         errestR35(2,1) = cond_sum(normw3,g2R3,I2R3)*scale_fac;
 %                         errestR35(3,1) = cond_sum(normw3,g3R3,I3R3)*scale_fac;
 %                         errestR35(1,1) = sum(abs(tmp1R3))/abs(I1R3)*eps*nquad2;
-%                         errestR35(2,1) = sum(abs(tmp2R3))/abs(I1R3)*eps*nquad2;
-%                         errestR35(3,1) = sum(abs(tmp3R3))/abs(I1R3)*eps*nquad2;
+%                         errestR35(2,1) = sum(abs(tmp2R3))/abs(I2R3)*eps*nquad2;
+%                         errestR35(3,1) = sum(abs(tmp3R3))/abs(I3R3)*eps*nquad2;
                         corrR3 = sum(errestR35(:,1) > toln) > 0;
                     else
                         % 1/R^5 bad, assume same corr needed for 1/R^3

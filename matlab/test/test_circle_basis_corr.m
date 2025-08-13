@@ -293,7 +293,7 @@ loglog(abs(bv),errmodv,'o');
 loglog(abs(bv),errestv,'mx-');
 loglog(abs(bv),1e-16*1./abs(bv).^2);
 grid on;
-legend('standard','modified','errest','O(1/b^2)');
+legend('standard','modified','errest','$\mathcal{O}(1/b^2)$','interpreter','latex');
 xlabel('b');
 ylabel('rel err');
 title(['m=' num2str(m) ', vpa=' num2str(use_vpa) ', corrcoeff=' corr_coeff ', delta=' num2str(delta)]);
@@ -309,9 +309,9 @@ if m == 5
 end
 grid on;
 if m == 5
-    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)','O(1/b^4)');
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','$O(1/b^2)$','$O(1/b^4)$','interpreter','latex');
 else
-    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|','O(1/b^2)');
+    legend('inf-norm, quad vec nonshifted','inf-norm, quad vec shifted','|Iref|',' $O(1/b^2)$','interpreter','latex');
 end
 xlabel('b');
 ylabel('value');
@@ -392,7 +392,7 @@ grid on;
 xlim([min(kstd),max(kstd)]);
 xlabel('k');
 ylabel('absolute value of coeff');
-legend('standard: c_k','modified: d_k');
+legend('standard: ck','modified: dk');
 
 figure;
 if add_shifted_sine
@@ -402,7 +402,7 @@ else
 end
 xlabel('wavenumber, k');
 ylabel('Relative magnitude of coefficient');
-title(['Decay of modified d_k coefficients, delta=' num2str(delta)]);
+title(['Decay of modified dk coefficients, delta=' num2str(delta)]);
 grid on;
 xlim([min(kmod),max(kmod)]);
 

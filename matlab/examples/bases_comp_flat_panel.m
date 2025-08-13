@@ -393,6 +393,8 @@ if ~savefig
     legend('non-shifted: ck','shifted: dk');
 end
 
+close(1); close(2); close(3);
+
 alignfigs;
 
 if savefig
