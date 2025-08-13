@@ -1,3 +1,7 @@
+
+[submodule "external/chebfun"]
+	path = external/chebfun
+	url = https://github.com/chebfun/chebfun.git
 [submodule "external/linequad"]
 	path = external/linequad
-	url = https://github.com/davidkrantz/mylinequad.git
+	url = https://github.com/davidkrantz/linequad.git
