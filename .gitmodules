@@ -6,3 +6,7 @@
 	path = external/linequad
 	url = https://github.com/davidkrantz/linequad.git
 	branch = master
+[submodule "external/kdtree"]
+	path = external/kdtree
+	url = https://github.com/taiya/kdtree
+	branch = master

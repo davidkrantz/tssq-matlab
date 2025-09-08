@@ -61,7 +61,8 @@ coeffstrunc(remove_mask, :) = [];
 ktrunc(remove_mask) = [];
 
 % index and distance to closest grid node
-[tmpidx,dist] = knnsearch([xj yj zj],[X.' Y.' Z.']); % (ntar x 1)
+kd = KDTree([xj yj zj]);
+[tmpidx,dist] = kd.nn([X.' Y.' Z.']);
 
 % first coarse filter: consider only target points with dist<cutdist
 ds = (2*pi)/n; % grid spacing
