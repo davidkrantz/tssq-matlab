@@ -20,6 +20,8 @@ function [mu1,mu3,mu5] = periodic_basis_integrals(r,kmax,n,K,E,zero_order)
 %   mu3 - basis integrals for singularity p = 3/2
 %   mu5 - basis integrals for singularity p = 5/2
 %
+% AUTHOR: David Krantz (davkra@kth.se)
+%
 % NOTE: Recurrence relations from Lemma 2.3 in 
 %   https://arxiv.org/pdf/2412.19575
 

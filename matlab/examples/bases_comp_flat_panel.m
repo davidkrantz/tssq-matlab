@@ -27,7 +27,7 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = bases_comp_flat_panel(...
 % OUTPUTS:
 %   errv    - relative absolute error in non-shifted basis evaluation for each b
 %   errshv  - relative absolute error in shifted basis evaluation for each b
-%   errestv - cancellation error estimate
+%   errestv - cancellation error estimate using standard basis
 %   c       - monomial basis coefficients (standard, unshifted)
 %   d       - monomial basis coefficients (modified, shifted)
 %   pmat    - matrix of integrals P_k^m for standard basis
@@ -277,7 +277,7 @@ MS = 7; % markersize
 tmpcol = colororder; % default Matlab color ordering
 
 % to make figure windows equal in size
-figure; 
+figure;
 figure;
 figure;
 
@@ -290,11 +290,11 @@ loglog(abs(bv),errshv3+eps,'Color',tmpcol(2,:),'Marker','square','LineStyle','-'
 loglog(abs(bv),errv5+eps,'Color',tmpcol(3,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 loglog(abs(bv),errshv5+eps,'Color',tmpcol(3,:),'Marker','square','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 loglog(abs(bv),1e-16*1./abs(bv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-loglog(abs(bv),errestv1+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+1);
-loglog(abs(bv),errestv3+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+1);
-loglog(abs(bv),errestv5+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+1);
+loglog(abs(bv),errestv1+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+2);
+loglog(abs(bv),errestv3+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+2);
+loglog(abs(bv),errestv5+eps,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+2);
 grid on;
-legend('$m=1$, std','$m=1$, mod','$m=3$, std','$m=3$, mod','$m=5$, std','$m=5$, mod','fontsize',FS,'interpreter','latex');
+legend('$m=1$, std','$m=1$, mod','$m=3$, std','$m=3$, mod','$m=5$, std','$m=5$, mod','','','','$E_{\textrm{cancel}}$','fontsize',FS,'interpreter','latex');
 xlabel('Distance to $\Gamma$, $b$','fontsize',FS,'interpreter','latex');
 ylabel('Relative error','fontsize',FS,'interpreter','latex');
 xticks([1e-5 1e-4 1e-3 1e-2 1e-1 1e-0]);
@@ -329,12 +329,34 @@ annotation('textarrow',[0.2204 0.19],[0.62 0.55],'String','$\mathcal{O}(1/b^2)$'
 annotation('textarrow',[0.43 0.37],[0.8 0.72],'String','$\mathcal{O}(1/b^4)$','fontsize',FS,'interpreter','latex')
 
 figure('DefaultAxesFontSize',FS);
+loglog(abs(bv),vecnorm(c.*pmat1,inf,1)./abs(irefv1).','Color',tmpcol(1,:),'Marker','+','LineStyle','none','LineWidth',LW,'MarkerSize',MS+2);
+hold on;
+loglog(abs(bv),vecnorm(d.*pshmat1,inf,1)./abs(irefv1).','Color',tmpcol(1,:),'Marker','o','LineStyle','none','LineWidth',LW,'MarkerSize',MS+2);
+loglog(abs(bv),vecnorm(c.*pmat3,inf,1)./abs(irefv3).','Color',tmpcol(2,:),'Marker','*','LineStyle','none','LineWidth',LW,'MarkerSize',MS);
+loglog(abs(bv),vecnorm(d.*pshmat3,inf,1)./abs(irefv3).','Color',tmpcol(2,:),'Marker','square','LineStyle','none','LineWidth',LW,'MarkerSize',MS+2);
+loglog(abs(bv),vecnorm(c.*pmat5,inf,1)./abs(irefv5).','Color',tmpcol(3,:),'Marker','x','LineStyle','none','LineWidth',LW,'MarkerSize',MS);
+loglog(abs(bv),vecnorm(d.*pshmat5,inf,1)./abs(irefv5).','Color',tmpcol(3,:),'Marker','diamond','LineStyle','none','LineWidth',LW,'MarkerSize',MS+2);
+loglog(abs(bv),1e-1*1./abs(bv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+grid on;
+legend('$\|\mathbf{c}\odot\mathbf{P}_1\|_{\infty}/|I_1|$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}_1\|_{\infty}/|I_1|$', ...
+       '$\|\mathbf{c}\odot\mathbf{P}_3\|_{\infty}/|I_3|$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}_3\|_{\infty}/|I_3|$', ...
+       '$\|\mathbf{c}\odot\mathbf{P}_5\|_{\infty}/|I_5|$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}_5\|_{\infty}/|I_5|$', ...
+    'fontsize',FS,'interpreter','latex');
+
+xlabel('Distance to $\Gamma$, $b$','fontsize',FS,'interpreter','latex');
+ylabel('Value','fontsize',FS,'interpreter','latex');
+xticks([1e-5 1e-4 1e-3 1e-2 1e-1 1e-0]);
+ylim([1e-1,1e10]);
+yticks([1e0 1e2 1e4 1e6 1e8 1e10]);
+annotation('textarrow',[0.4 0.5],[0.45 0.5],'String','$\mathcal{O}(1/b^2)$','fontsize',FS,'interpreter','latex')
+
+figure('DefaultAxesFontSize',FS);
 loglog(abs(bv),errv5+eps,'Color',tmpcol(4,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 hold on;
 loglog(abs(bv),errshv5+eps,'Color',tmpcol(5,:),'Marker','square','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 loglog(abs(bv),errshv5nocorr+eps,'Color',tmpcol(6,:),'Marker','o','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 grid on;
-legend('$m=5$, std','$m=5$, mod ($d_1$ corrected)','$m=5$, mod ($d_1$ not corrected)','fontsize',FS-1,'interpreter','latex');
+legend('$m=5$, std','$m=5$, mod ($d_1$ stable)','$m=5$, mod ($d_1$ uncorrected)','fontsize',FS,'interpreter','latex');
 xlabel('Distance to $\Gamma$, $b$','fontsize',FS,'interpreter','latex');
 ylabel('Relative error','fontsize',FS,'interpreter','latex');
 xticks([1e-5 1e-4 1e-3 1e-2 1e-1 1e-0]);
@@ -345,9 +367,9 @@ figure('DefaultAxesFontSize',FS);
 loglog(deltav,errv5delta,'Color',tmpcol(4,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 hold on;
 loglog(deltav,errshv5delta,'Color',tmpcol(5,:),'Marker','square','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-loglog(deltav,errestv5delta,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+1);
+loglog(deltav,errestv5delta,'Color','k','Marker','.','LineStyle','-','LineWidth',LW,'MarkerSize',MS+2);
 grid on;
-legend('$m=5$, std','$m=5$, mod','fontsize',FS,'interpreter','latex');
+legend('$m=5$, std','$m=5$, mod','$E_{\textrm{cancel}}$','fontsize',FS,'interpreter','latex');
 xlabel('$\delta$','fontsize',FS,'interpreter','latex');
 ylabel('Relative error','fontsize',FS,'interpreter','latex');
 xlim([1e-16 1e0]);
@@ -401,8 +423,9 @@ if savefig
     disp('saving figures...');
     exportgraphics(figure(4),'figs/ex1_err_vs_dist_std_mod.pdf','Resolution',400);
     exportgraphics(figure(5),'figs/ex1_inf_norm_quad_vec.pdf','Resolution',400);
-    exportgraphics(figure(6),'figs/ex2_err_vs_dist_m5_test_corr_coeff.pdf','Resolution',400);
-    exportgraphics(figure(7),'figs/ex3_err_vs_delta_m5.pdf','Resolution',400);
+    exportgraphics(figure(6),'figs/ex1_inf_norm_quad_vec_new.pdf','Resolution',400);
+    exportgraphics(figure(7),'figs/ex2_err_vs_dist_m5_test_corr_coeff.pdf','Resolution',400);
+    exportgraphics(figure(8),'figs/ex3_err_vs_delta_m5.pdf','Resolution',400);
     disp('sucessfully saved figures');
 end
 end

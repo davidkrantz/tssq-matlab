@@ -9,8 +9,8 @@ function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N,varargin)
 % - I3(1) and I5(1) are computed using power series in b in cones
 %   around real line extending from endpoints.
 %
-% Based on recursions by Anna-Karin Tornberg & Katarina Gustavsson
-% Journal of Computational Physics 215 (2006) 172–196
+% NOTE: Minor modifications of recurrence formulas provided in
+% https://github.com/ludvigak/linequad/blob/master/matlab/src/recursions/rsqrt_pow_integrals_shift.m
 
 if nargin == 3
     NO_HP_SWITCH = varargin{1}; % disables half plane switch for I1(1)

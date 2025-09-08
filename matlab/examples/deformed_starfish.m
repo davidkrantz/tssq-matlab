@@ -3,6 +3,9 @@
 % reference values obtained from an adaptive quadrature method.
 %
 % AUTHOR: David Krantz (davkra@kth.se), June 2025
+%
+% NOTE: Based on demo_long_fiber.m from the GitHub repository
+%   https://github.com/ludvigak/linequad
 
 clear all;
 close all;
@@ -199,7 +202,7 @@ f2 = fill(d2,[specquadsh_err_data(:,1); flipud(specquadsh_err_data(:,3))],'g','F
 f2.FaceColor = tmpcol(5,:);
 f3 = fill(d2,[specquadsh_err_R5_data(:,1); flipud(specquadsh_err_R5_data(:,3))],'g','FaceAlpha',falpha);
 f3.FaceColor = tmpcol(6,:);
-legend('mean, std','mean, mod ($I_3$ and $I_5$ corrected)','','mean, mod (only $I_5$ corrected)','fontsize',FS-1,'interpreter','latex');
+legend('mean, SSQ','mean, TSSQ ($I_3$ and $I_5$ corrected)','','mean, TSSQ (only $I_5$ corrected)','fontsize',FS-1,'interpreter','latex');
 grid on;
 xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
 ylabel('Relative error','fontsize',FS,'interpreter','latex');

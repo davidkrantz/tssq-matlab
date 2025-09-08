@@ -1,5 +1,5 @@
 function [x, y, z, xp, yp, zp] = squiggle()
-% random squiggle loop in t in [0,1]
+% random squiggle loop in t in [0,1] as in linequad
     K = 20;   % max Fourier mode in squiggle
     K0 = 5;   % mode beyond which decay kicks in
     k = -K:K;

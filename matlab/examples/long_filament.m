@@ -166,22 +166,22 @@ xlabel('$x$','fontsize',FS,'interpreter','latex');
 ylabel('$y$','fontsize',FS,'interpreter','latex');
 zlabel('$z$','fontsize',FS,'interpreter','latex');
 
-figure('DefaultAxesFontSize',FS);
-markerstr = {'^','square','<'};
-for ii = 1:numel(tolv)
-    loglog(distv,specquad_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-    hold on;
-    loglog(distv,specquadsh_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker',markerstr(ii),'LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-end
-loglog(distv,adapquad_err_data(:,ii,3),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
-loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-%legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
-grid on;
-xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
-ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
-xlim([distv(end),distv(1)]);
-xticks([1e-8 1e-6 1e-4 1e-2]);
-annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
+% figure('DefaultAxesFontSize',FS);
+% markerstr = {'^','square','<'};
+% for ii = 1:numel(tolv)
+%     loglog(distv,specquad_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+%     hold on;
+%     loglog(distv,specquadsh_err_data(:,ii,3),'Color',tmpcol(ii,:),'Marker',markerstr(ii),'LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+% end
+% loglog(distv,adapquad_err_data(:,ii,3),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
+% loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+% %legend('$\epsilon=10^{-6}$, std','$\epsilon=10^{-6}$, mod','$\epsilon=10^{-8}$, std','$\epsilon=10^{-8}$, mod','$\epsilon=10^{-10}$, std','$\epsilon=10^{-10}$, mod','','fontsize',FS-3,'interpreter','latex');
+% grid on;
+% xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
+% ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
+% xlim([distv(end),distv(1)]);
+% xticks([1e-8 1e-6 1e-4 1e-2]);
+% annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
 
 figure('DefaultAxesFontSize',FS);
 markerstr = {'^','square','<'};
@@ -201,80 +201,58 @@ annotation('textarrow',[0.43 0.35],[0.78 0.65],'String','$\mathcal{O}(1/d^2)$','
 
 d2 = [distv; flipud(distv)];
 falpha = 0.4;
-for ii = 1:numel(tolv)
-    figure('DefaultAxesFontSize',FS);
-    loglog(distv,specquad_err_data(:,ii,2),'Color',tmpcol(ii,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-    hold on;
-    f = fill(d2,[specquad_err_data(:,ii,1); flipud(specquad_err_data(:,ii,3))],'g','FaceAlpha',falpha);
-    f.FaceColor = tmpcol(ii,:);
-    f.EdgeColor = tmpcol(ii,:);
-    loglog(distv,specquadsh_err_data(:,ii,2),'Color',tmpcol(ii+1,:),'Marker',markerstr(ii),'LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-    f = fill(d2,[specquadsh_err_data(:,ii,1); flipud(specquadsh_err_data(:,ii,3))],'g','FaceAlpha',falpha);
-    f.FaceColor = tmpcol(ii+1,:);
-    f.EdgeColor = tmpcol(ii+1,:);
-    loglog(distv,adapquad_err_data(:,ii,3),'Color','k','Marker','pentagram','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor','k');
-    loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-    grid on;
-    xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
-    ylabel('Maximum relative error','fontsize',FS,'interpreter','latex');
-    xlim([min(distv),max(distv)]);
-    yline(tolv(ii));
-    title(num2str(tolv(ii)));
-end
-
-err1 = reshape(log10(specquadsh_err_all(1,:,:)),numel(distv),Ne);
-err2 = reshape(log10(specquadsh_err_all(2,:,:)),numel(distv),Ne);
-
-xt = cell(numel(distv),1);
-for i = 1:numel(distv)
-    xt{i} = num2str(round(log10(distv(i)),1));
-end
+figure('DefaultAxesFontSize',FS);
+loglog(distv,specquad_err_data(:,1,2),'Color',tmpcol(1,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+hold on;
+f = fill(d2,[specquad_err_data(:,1,1); flipud(specquad_err_data(:,1,3))],'g','FaceAlpha',falpha);
+f.FaceColor = tmpcol(1,:);
+f.EdgeColor = tmpcol(1,:);
+loglog(distv,specquadsh_err_data(:,1,2),'Color',tmpcol(2,:),'Marker','square','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(2,:));
+f = fill(d2,[specquadsh_err_data(:,1,1); flipud(specquadsh_err_data(:,1,3))],'g','FaceAlpha',falpha);
+f.FaceColor = tmpcol(2,:);
+f.EdgeColor = tmpcol(2,:);
+loglog(distv,5e-13./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
+grid on;
+xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
+ylabel('Relative error','fontsize',FS,'interpreter','latex');
+xlim([min(distv),max(distv)]);
+%legend('$\epsilon=10^{-4}$, std','','$\epsilon=10^{-4}$, mod','fontsize',FS,'interpreter','latex');
+legend('$\epsilon=10^{-4}$, SSQ','','$\epsilon=10^{-4}$, TSSQ','fontsize',FS,'interpreter','latex');
+annotation('textarrow',[0.4 0.35],[0.78 0.67],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
+ylim([1e-15,1e8]);
 
 figure('DefaultAxesFontSize',FS);
-boxplot(fliplr(err1.'));
+loglog(distv,specquad_err_data(:,2,2),'Color',tmpcol(3,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
 hold on;
-plot(flipud(log10(specquad_err_data(:,1,3))),'Color',tmpcol(1,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
+f = fill(d2,[specquad_err_data(:,2,1); flipud(specquad_err_data(:,2,3))],'g','FaceAlpha',falpha);
+f.FaceColor = tmpcol(3,:);
+f.EdgeColor = tmpcol(3,:);
+loglog(distv,specquadsh_err_data(:,2,2),'Color',tmpcol(4,:),'Marker','square','LineStyle','-','LineWidth',LW,'MarkerSize',MS,'MarkerFaceColor',tmpcol(4,:));
+f = fill(d2,[specquadsh_err_data(:,2,1); flipud(specquadsh_err_data(:,2,3))],'g','FaceAlpha',falpha);
+f.FaceColor = tmpcol(4,:);
+f.EdgeColor = tmpcol(4,:);
+loglog(distv,1e-15./abs(distv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
 grid on;
-loglog(-log10(1./distv.^2)+10,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-%yl = yline(-4,'k-','$\epsilon=10^{-4}$','LineWidth',LW,'fontsize',FS,'Interpreter','latex');
-%yl.LabelHorizontalAlignment = 'left';
-ylim([-16,8]);
-xticklabels(gca,flipud(xt));
-legend('maximum, std: ($\epsilon=10^{-4}$)','slope $-2$','fontsize',FS-1,'interpreter','latex');
-xlabel(['$\log_{10}($','Distance to ', '$\Gamma)$'],'fontsize',FS,'interpreter','latex');
-ylabel(['$\log_{10}($','Relative error','$)$'],'fontsize',FS,'interpreter','latex');
-set(gca,'TickLabelInterpreter','latex');
-
-figure;
-
-figure('DefaultAxesFontSize',FS);
-boxplot(fliplr(err2.'));
-hold on;
-plot(flipud(log10(specquad_err_data(:,2,3))),'Color',tmpcol(2,:),'Marker','*','LineStyle','-','LineWidth',LW,'MarkerSize',MS);
-grid on;
-loglog(-log10(1./distv.^2)+10,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
-%yl = yline(-6,'k-','$\epsilon=10^{-6}$','LineWidth',LW,'fontsize',FS,'Interpreter','latex');
-%yl.LabelHorizontalAlignment = 'left';
-ylim([-16,8]);
-xticklabels(flipud(xt));
-legend('maximum, std: ($\epsilon=10^{-6}$)','slope $-2$','fontsize',FS-1,'interpreter','latex');
-xlabel(['$\log_{10}($','Distance to ', '$\Gamma)$'],'fontsize',FS,'interpreter','latex');
-ylabel(['$\log_{10}($','Relative error','$)$'],'fontsize',FS,'interpreter','latex');
-set(gca,'TickLabelInterpreter','latex');
+xlabel('Distance to $\Gamma$, $d$','fontsize',FS,'interpreter','latex');
+ylabel('Relative error','fontsize',FS,'interpreter','latex');
+xlim([min(distv),max(distv)]);
+%legend('$\epsilon=10^{-6}$, std','','$\epsilon=10^{-6}$, mod','fontsize',FS,'interpreter','latex');
+legend('$\epsilon=10^{-6}$, SSQ','','$\epsilon=10^{-6}$, TSSQ','fontsize',FS,'interpreter','latex');
+annotation('textarrow',[0.41 0.35],[0.69 0.58],'String','$\mathcal{O}(1/d^2)$','fontsize',FS,'interpreter','latex')
+ylim([1e-15,1e8]);
 
 close(1);
 close(2);
 close(3);
-close(10);
 
 alignfigs;
 
 if savefig
     disp('saving figures...');
     exportgraphics(figure(4),'figs/long_filament.pdf','Resolution',400);
-    exportgraphics(figure(6),'figs/long_filament_err_vs_dist.pdf','Resolution',400);
-    exportgraphics(figure(9),'figs/long_filament_err_vs_dist_boxplot1.pdf','Resolution',400);
-    exportgraphics(figure(11),'figs/long_filament_err_vs_dist_boxplot2.pdf','Resolution',400);
+    %exportgraphics(figure(5),'figs/long_filament_err_vs_dist.pdf','Resolution',400);
+    exportgraphics(figure(6),'figs/long_filament_err_vs_dist_tol4.pdf','Resolution',400);
+    exportgraphics(figure(7),'figs/long_filament_err_vs_dist_tol6.pdf','Resolution',400);
     disp('sucessfully saved figures');
 end
 
