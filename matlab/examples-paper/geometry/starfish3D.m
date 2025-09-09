@@ -1,4 +1,4 @@
-function [x, y, z, xp, yp, zp, xpp, ypp, zpp] = starfish3D(amplitude, n_arms, radius)
+function curve = starfish3D_new(amplitude, n_arms, radius)
 % t in [0,1)
 if nargin < 3
     radius = 1.0;
@@ -21,10 +21,13 @@ xp = @(t) dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
 yp = @(t) dcommon(t(:)') .* sin(2*pi*t(:)') + common(t(:)') .* cos(2*pi*t(:)');
 zp = @(t) wobble_amp * wobble_freq * cos(wobble_freq * 2*pi*t(:)');
 
-% Second derivatives
-ddcommon = @(t) -radius * amplitude * n_arms^2 * cos(n_arms * 2*pi*t(:)');
+s = @(t) sqrt(xp(t).^2 + yp(t).^2 + zp(t).^2);
 
-xpp = @(t) ddcommon(t(:)') .* cos(2*pi*t(:)') - 2 * dcommon(t(:)') .* sin(2*pi*t(:)') - common(t(:)') .* cos(2*pi*t(:)');
-ypp = @(t) ddcommon(t(:)') .* sin(2*pi*t(:)') + 2 * dcommon(t(:)') .* cos(2*pi*t(:)') - common(t(:)') .* sin(2*pi*t(:)');
-zpp = @(t) -wobble_amp * wobble_freq^2 * sin(wobble_freq * 2*pi*t(:)');
+curve.x = x;
+curve.y = y;
+curve.z = z;
+curve.xp = xp;
+curve.yp = yp;
+curve.zp = zp;
+curve.s = s;
 end

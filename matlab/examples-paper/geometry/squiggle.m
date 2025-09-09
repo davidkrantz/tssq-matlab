@@ -1,5 +1,7 @@
-function [x, y, z, xp, yp, zp] = squiggle()
-% random squiggle loop in t in [0,1] as in linequad
+function curve = squiggle_new()
+%SQUIGGLE  Defines a test curve (closed loop squiggle)
+%   Returns struct with x(t), y(t), z(t), xp(t), yp(t), zp(t), s(t)
+
     K = 20;   % max Fourier mode in squiggle
     K0 = 5;   % mode beyond which decay kicks in
     k = -K:K;
@@ -13,4 +15,13 @@ function [x, y, z, xp, yp, zp] = squiggle()
     xp = @(t) real(c(1,:)*(2i*pi*k'.*exp(2i*pi*k'*t(:)')));
     yp = @(t) real(c(2,:)*(2i*pi*k'.*exp(2i*pi*k'*t(:)')));
     zp = @(t) real(c(3,:)*(2i*pi*k'.*exp(2i*pi*k'*t(:)')));
+    s = @(t) sqrt(xp(t).^2 + yp(t).^2 + zp(t).^2);
+
+    curve.x = x;
+    curve.y = y;
+    curve.z = z;
+    curve.xp = xp;
+    curve.yp = yp;
+    curve.zp = zp;
+    curve.s = s;
 end
