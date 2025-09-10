@@ -1,7 +1,7 @@
 function [u1,u2,u3] = adaptive_quadrature_wrapper(curve,density,targets,opts)
 %ADAPTIVE_QUADRATURE_WRAPPER  Wrapper for adaptive quadrature
 %
-%   [u1,u2,u3] = adaptive_quadrature_wrapper(curve,density,targets,nquad,slender_eps,tol)
+%   [u1,u2,u3] = adaptive_quadrature_wrapper(curve,density,targets,opts)
 
     [tj_ref, wj_ref, ~] = adaptive_panelization(curve.s, opts.nquad, opts.tol);
 

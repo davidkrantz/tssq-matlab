@@ -1,8 +1,8 @@
-function opts = default_options(example)
-%DEFAULT_OPTIONS  Default options for SSQ/TSSQ paper examples
+function opts = default_options(basis)
+%DEFAULT_OPTIONS  Default options for SSQ/TSSQ bases used in examples.
 %
-%   opts = DEFAULT_OPTIONS(example)
-%   Returns a struct with default settings used in example
+%   opts = DEFAULT_OPTIONS(basis)
+%   Returns a struct with default settings for the basis choice.
 %
 %   Different fields:
 %     tol                 tolerance
@@ -17,8 +17,8 @@ function opts = default_options(example)
 %     basis               'monomial' = panel Gauss–Legendre (open curves) or 'fourier'  = global trapezoidal (closed curves)
 %     Hlim                sets how much the adaptive quadrature refines
 
-switch lower(example)
-    case 'long_filament'
+switch lower(basis)
+    case 'monomial'
         opts = struct();
         opts.tol                = 1e-4;
         opts.nquad              = 16;
@@ -31,14 +31,14 @@ switch lower(example)
         opts.corrR5             = true;
         opts.basis              = 'monomial';
         opts.Hlim               = 1;
-    case 'deformed_starfish'
+    case 'fourier'
         opts = struct();
         opts.tol                = 1e-10;
-        opts.nquad              = 16; % for adaptive quadrature
+        opts.nquad              = 16; % for adaptive quadrature reference
         opts.slender_eps        = 1e-3;
         opts.use_mod            = true;
         opts.corrR3             = true;
         opts.corrR5             = true;
         opts.basis              = 'fourier';
-        opts.Hlim               = 4;
+        opts.Hlim               = 4; % for adaptive quadrature reference
 end

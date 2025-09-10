@@ -1,5 +1,22 @@
-function curve = starfish3D_2pi_new(amplitude, n_arms, radius)
-% t in [0,2pi)
+function curve = starfish3D_2pi(amplitude, n_arms, radius)
+% STARFISH3D_2PI  Generate a smooth 3D starfish-shaped closed curve.
+%
+%   curve = starfish3D_2pi(amplitude, n_arms, radius)
+%
+%   INPUT:
+%     amplitude : radial modulation amplitude
+%     n_arms    : number of starfish arms
+%     radius    : base radius (default 1)
+%
+%   OUTPUT:
+%     curve struct with fields:
+%       x(t), y(t), z(t)   : position
+%       xp(t), yp(t), zp(t): derivatives wrt t
+%       s(t)               : speed
+%
+%   NOTE:
+%     t in [0, 2*pi)
+
 if nargin < 3
     radius = 1.0;
 end

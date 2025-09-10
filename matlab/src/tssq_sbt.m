@@ -1,5 +1,6 @@
 function [u1,u2,u3,stats] = tssq_sbt(curve, density, targets, opts)
-%TSSQ_SBT  Translated Singularity Swap Quadrature (TSSQ) for SBT kernel.
+%TSSQ_SBT  Translated Singularity Swap Quadrature (TSSQ) for slender-body 
+% theory (SBT) kernel.
 %
 %   [u1,u2,u3,stats] = TSSQ_SBT(curve, density, targets, opts)
 %

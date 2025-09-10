@@ -12,7 +12,7 @@ close all;
 format long;
 rng(123);
 
-opts = default_options('deformed_starfish');
+opts = default_options('fourier');
 savefig = 0;
 
 % Example parameters
@@ -22,14 +22,14 @@ distv = fliplr(logspace(-8,-2,20)).'; % distances to test
 % Setup curve and artificial layer density
 % adaptive uses t in [0,1)
 curve_adap = starfish3D(0.3,5,1); % x(t), y(t), z(t), xp(t), yp(t), zp(t), s(t)
-density_adap = struct('f1', @(t) curve_adap.x(t), ...
-                 'f2', @(t) curve_adap.y(t), ...
-                 'f3', @(t) curve_adap.z(t));
+density_adap.f1 = @(t) curve_adap.x(t);
+density_adap.f2 = @(t) curve_adap.y(t);
+density_adap.f3 = @(t) curve_adap.z(t);
 % SSQ and TSSQ uses t in [0,2*pi)
 curve = starfish3D_2pi(0.3,5,1);
-density = struct('f1', @(t) curve.x(t)/(2*pi), ...
-                 'f2', @(t) curve.y(t)/(2*pi), ...
-                 'f3', @(t) curve.z(t)/(2*pi));
+density.f1 = @(t) curve.x(t)/(2*pi);
+density.f2 = @(t) curve.y(t)/(2*pi);
+density.f3 = @(t) curve.z(t)/(2*pi);
 
 % Target setup (random normals at fixed distances)
 t = rand(1,Neval);
