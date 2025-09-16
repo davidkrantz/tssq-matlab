@@ -1,4 +1,4 @@
-function curve = squiggle_new()
+function curve = squiggle()
 %SQUIGGLE  Defines a test curve (closed loop squiggle)
 %   Returns struct with x(t), y(t), z(t), xp(t), yp(t), zp(t), s(t)
 
