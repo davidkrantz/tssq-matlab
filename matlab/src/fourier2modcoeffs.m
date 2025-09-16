@@ -1,4 +1,4 @@
-function [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a)
+function [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a,sym)
 % FOURIER2MODCOEFFS converts Fourier basis coefficients to a modified
 %   basis. Assuming N even, the regular expansion is
 %
@@ -10,7 +10,8 @@ function [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a)
 %
 % [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a) takes the Fourier
 %   coefficents c_coeffs (length-N vector) and maps them to the
-%   coefficients of the modified basis defined by the shift a.
+%   coefficients of the modified basis defined by the shift a. N can be
+%   even or odd.
 %
 % Without arguments runs test defined below
 %
@@ -18,6 +19,8 @@ function [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a)
 %   c_coeffs - length-N vector of complex Fourier coefficients, assumed to be
 %              ordered with symmetric wavenumbers using get_k_vec(N, 2*pi)
 %   a        - real shift parameter defining the modified basis
+%   sym      - (optional, default true) if true, assume conjugate symmetry
+%              and compute only one half of b_k
 %
 % OUTPUTS:
 %   a0       - scalar for constant term in the modified basis
@@ -30,7 +33,9 @@ function [a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a)
 % NOTE: Function is based on the derivations and code 
 %   test_coeffs_in_new_basis_AK.m by Anna-Karin Tornberg.
 
-if nargin == 0, test_transform_coeffs; return; end
+if nargin < 3, sym = true; end
+
+if nargin == 0, test_transform_coeffs; test_real_function; return; end
 
 N = length(c_coeffs); % total number of standard Fourier modes
 
@@ -50,16 +55,11 @@ b_coeffs = zeros(N-2,1); % modified basis coefficients output vector
 if mod(N,2) == 0
     ind0_b = N/2; % wavenumers = -N/2+1 : N/2-2
     ind0_c = N/2+1; % wavenumbers = -N/2 : N/2 - 1
+    ind_flip_start = 2; % for symmetry fill later
 else
     ind0_b = (N-1)/2; % wavenumbers = -(N-1)/2+1 : (N-1)/2-1
     ind0_c = (N-1)/2+1; % wavenumbers = -(N-1)/2 : (N-1)/2
-end
-
-% positive modes
-b_coeffs(N-2) = alpha3*c_coeffs(N);
-b_coeffs(N-3) = alpha1*b_coeffs(N-2) + alpha3*c_coeffs(N-1);
-for j = (N-4):-1:(ind0_b+1) % from high to low
-    b_coeffs(j) = alpha1*b_coeffs(j+1) + alpha2*b_coeffs(j+2) + alpha3*c_coeffs(j+2);
+    ind_flip_start = 1; % for symmetry fill later
 end
 
 % negative modes
@@ -67,6 +67,18 @@ b_coeffs(1) = alphainv3*c_coeffs(1);
 b_coeffs(2) = alphainv1*b_coeffs(1) + alphainv3*c_coeffs(2);
 for j = 3:(ind0_b-1) % from low to high
     b_coeffs(j) = alphainv1*b_coeffs(j-1) + alphainv2*b_coeffs(j-2) + alphainv3*c_coeffs(j);
+end
+
+if sym
+    % positive modes by conjugate symmetry
+    b_coeffs(ind0_b+1:end) = flipud(conj(b_coeffs(ind_flip_start:ind0_b-1)));
+else
+    % positive modes
+    b_coeffs(N-2) = alpha3*c_coeffs(N);
+    b_coeffs(N-3) = alpha1*b_coeffs(N-2) + alpha3*c_coeffs(N-1);
+    for j = (N-4):-1:(ind0_b+1) % from high to low
+       b_coeffs(j) = alpha1*b_coeffs(j+1) + alpha2*b_coeffs(j+2) + alpha3*c_coeffs(j+2);
+    end
 end
 
 % helper variables for a0, a1 and b0
@@ -91,7 +103,7 @@ kvec_c = get_k_vec(N,2*pi);
 c_coeffs = (rand(size(kvec_c)) - 0.5)*2 + 1i*(rand(size(kvec_c)) - 0.5)*2;
 c_coeffs = c_coeffs .* exp(-0.01 * kvec_c.^2);
 
-[a0, a1, b_coeffs] = fourier2modcoeffs(c_coeffs, a); % transform coeffs
+[a0, a1, b_coeffs] = fourier2modcoeffs(c_coeffs, a, false); % transform coeffs
 
 Np = 2^nextpow2(N*2); % evaluation grid
 xv = (0:Np-1)/Np*2*pi;
@@ -109,7 +121,44 @@ end
 maxabserr = norm(Qsum-Psum,inf);
 maxrelerr = norm((Qsum-Psum)./Qsum,inf);
 
+fprintf('random coeff test:\n');
 fprintf('max absolute recon error: %.14e\n', maxabserr);
 fprintf('max relative recon error: %.14e\n', maxrelerr);
 
 end
+
+function test_real_function
+% Test with a real-valued function: f(x) = cos(3x) + 0.5 cos(5x) + 10
+
+N = 128; a = pi/7;
+kvec_c = get_k_vec(N,2*pi);
+
+% true Fourier coefficients (real function, conjugate symmetry)
+c_coeffs = zeros(N,1);
+c_coeffs(kvec_c== 3) = 0.5;
+c_coeffs(kvec_c==-3) = 0.5;
+c_coeffs(kvec_c==0) = 10;
+c_coeffs(kvec_c== 5) = 0.25;
+c_coeffs(kvec_c==-5) = 0.25;
+
+[a0,a1,b_coeffs] = fourier2modcoeffs(c_coeffs,a,false);
+
+Np = 2048;
+xv = (0:Np-1)/Np*2*pi;
+f_true = cos(3*xv) + 0.5*cos(5*xv)+10;
+
+f_recon = a0 + a1*sin(xv-a);
+kvec_b = get_k_vec(N-2,2*pi);
+for k = 1:(N-2)
+    f_recon = f_recon + b_coeffs(k)*exp(1i*kvec_b(k)*xv).*sin((xv-a)/2).^2;
+end
+f_recon = real(f_recon);
+
+maxabserr = norm(f_true-f_recon,inf);
+maxrelerr = norm((f_true-f_recon)./f_true,inf);
+
+fprintf('real-valued function test:\n');
+fprintf('max absolute recon error: %.14e\n', maxabserr);
+fprintf('max relative recon error: %.14e\n', maxrelerr);
+end
+
