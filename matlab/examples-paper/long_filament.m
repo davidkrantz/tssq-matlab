@@ -23,8 +23,8 @@ distv = fliplr(logspace(-8,-2,20)).'; % distances to test
 % Setup curve and artificial layer density
 curve = squiggle(); % x(t), y(t), z(t), xp(t), yp(t), zp(t), s(t)
 density.f1 = @(t) curve.x(t);
-density.f2 = @(t) curve.x(t);
-density.f3 = @(t) curve.x(t);
+density.f2 = @(t) curve.y(t);
+density.f3 = @(t) curve.z(t);
 
 % Target setup (random normals at fixed distances)
 t = rand(1,Neval);
