@@ -1,5 +1,5 @@
 function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = bases_comp_flat_panel(...
-    m,sigma,r,delta,a,bv,n,adj_method,use_bjorck_pereyra,corr_coeff,errest_alt)
+    m,sigma,r,delta,a,bv,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,corr_coeff,errest_alt)
 % BASES_COMP_FLAT_PANEL compares non-shifted and shifted monomial
 %   basis functions to compute
 %   
@@ -20,9 +20,10 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = bases_comp_flat_panel(...
 %   a                  - real part of singularity location t0
 %   bv                 - vector of imaginary parts of singularities t0 = a + ib
 %   n                  - number of Gauss-Legendre nodes (basis function order)
-%   adj_method         - if true, solves non-shifted using adjoint method
+%   adj_method_F       - vector [std,mod], if true, solves [std,mod] using old adjoint method for F
+%   adj_method_sigma   - vector [std,mod], if true, solves [std,mod] using new adjoint method for sigma
 %   use_bjorck_pereyra - boolean, use Björck-Pereyra method to solve Vandermonde systems
-%   errest_alt         - integer determines how to est cond number of sum
+%   errest_alt         - integer determines how to estimate sensitivity of sum
 %
 % OUTPUTS:
 %   errv    - relative absolute error in non-shifted basis evaluation for each b
@@ -43,18 +44,26 @@ if nargin == 0, run_comp_example; return; end
 
 % numerator
 h = @(t) t-a; % function small at t=a
-f = @(t) sigma(t).*(h(t).^r+delta); % modified "density", RR^T style vanishing near t=a
+g = @(t) h(t).^r+delta;
+f = @(t) sigma(t).*g(t); % modified "density", RR^T style vanishing near t=a
 
 % nodes
 [tj,~] = gauss(n); % double precision
 
 % samples
 fj = f(tj); % standard double precision
+gj = g(tj); % numerator, except layer density function
 sj = sigma(tj); % only layer density function, double precision
 
 wbary = bclag_interp_weights(tj); % barycentric Lagrange interpolation wts
 
 sh = a; % shift
+
+% normalized barycentric weight for adjoint method in sigma (std basis)
+if adj_method_sigma(1)
+    tmp = wbary./tj;
+    w0 = tmp/sum(tmp);
+end
 
 % basis coefficients, non-shifted, i.e. c_k coeffs of f
 if use_bjorck_pereyra
@@ -62,8 +71,17 @@ if use_bjorck_pereyra
 else
     V = ones(n,n); for k=2:n, V(:,k) = V(:,k-1).*(tj-0); end % Vandermonde not transp
     [Q,R] = qr(V);
-    [Qt,Rt] = qr(V.');
+    [QT,RT] = qr(V.');
+    QTT = QT';
     c = R\(Q'*fj);
+end
+
+% interpolation error
+if errest_alt == 3
+    fcheb = chebfun(f,[-1,1],n);
+    ccheb = fcheb.coeffs;
+    ccheb = ccheb./max(abs(ccheb));
+    interp_err = min(abs(ccheb));
 end
 
 % basis coefficients, shifted, i.e. d_k coeffs of f
@@ -72,14 +90,16 @@ if use_bjorck_pereyra
 else
     Vsh = ones(n,n); for k=2:n, Vsh(:,k) = Vsh(:,k-1).*(tj-sh); end
     [Qsh,Rsh] = qr(Vsh);
-    [Qsht,Rsht] = qr(Vsh.');
+    [QshT,RshT] = qr(Vsh.');
+    QshTT = QshT';
     d = Rsh\(Qsh'*fj);
 end
 
 % correct first coefficient in shifted basis
+ga = g(sh);
 if corr_coeff && abs(a) <= 1
-    sigma_interp = bclag_interp(sj,tj,wbary,sh); % barycentric Lagrange interp of layer dens at t=a
-    d(1) = sigma_interp*(h(sh)^r+delta); % eval remaining part of kernel analytically
+    sa = bclag_interp(sj,tj,wbary,sh); % barycentric Lagrange interp of layer dens at t=a
+    d(1) = sa*ga; % eval remaining part of kernel analytically
 end
 
 % loop over imag val of root
@@ -153,61 +173,77 @@ for i = 1:M
     pshmat(:,i) = psh;
     
     % non-shifted
-    if adj_method
-        % adj method
+    if adj_method_F(1)
+        % old adj method
         if use_bjorck_pereyra
             lam = pvand(tj,p);
         else
-            lam = Rt\(Qt'*p);
+            lam = RT\(QT'*p);
         end
         I = sum(lam.*fj);
+        wwj = lam;
+        ffj = fj;
+    elseif adj_method_sigma(1)
+        % new adj method for sigma
+        pp = [0;p(2:end)];
+        if use_bjorck_pereyra
+            W = pvand(tj,pp);
+        else
+            W = RT\(QTT*pp);
+        end
+        L = W.*gj + g(0)*p(1)*w0;
+        I = sum(L.*sj);
+        wwj = L;
+        ffj = sj;
     else
         % plain non-adj method
         I = sum(c.*p);
+        wwj = c;
+        ffj = p;
     end
     errv(i) = abs((I-Ie)/Ie);
 
-    % plain non-adj method, shifted
-    if adj_method
+    % shifted
+    if adj_method_F(2)
+        % old adj method, loses digits even with good basis choice
         if use_bjorck_pereyra
             lamsh = pvand(tj-sh,psh);
         else
-            lamsh = Rsht\(Qsht'*psh);
+            lamsh = RshT\(QshTT*psh);
         end
         Ish = sum(lamsh.*fj);
+    elseif adj_method_sigma(2)
+        % new adj method for sigma
+        ppsh = [0;psh(2:end)];
+        if use_bjorck_pereyra
+            Wsh = pvand(tj-sh,ppsh);
+        else
+            Wsh = RshT\(QshTT*ppsh);
+        end
+        tmp = wbary./(sh-tj);
+        w0sh = tmp/sum(tmp);
+        Lsh = Wsh.*gj + ga*psh(1)*w0sh;
+        Ish = sum(Lsh.*sj);
     else
         Ish = sum(d.*psh);
     end
     errshv(i) = abs((Ish-Ie)/Ie);
     
     % various estimation methods
-    if adj_method
-        if errest_alt == 1
-            % standard
-            kappa = sum(abs(lam.*fj))/abs(I);
-            kappa = kappa*n;
-        elseif errest_alt == 2
-            % condition number of dot product using Euclidean norm
-            kappa = norm(lam,inf)*norm(fj,inf)/abs(I);
-        elseif errest_alt == 3
-            % condition number of dot product using Euclidean norm
-            kappa = norm(lamsh,inf)*norm(fj,inf)/abs(Ish);
-        end
-    else
-        if errest_alt == 1
-            % standard
-            kappa = sum(abs(c.*p))/abs(I);
-            kappa = kappa*n;
-        elseif errest_alt == 2
-            % condition number of dot product using Euclidean norm
-            kappa = norm(c,inf)*norm(p,inf)/abs(I);
-        elseif errest_alt == 3
-            % condition number of dot product using Euclidean norm
-            kappa = norm(d,inf)*norm(psh,inf)/abs(Ish);
-        end
+    if errest_alt == 1
+        % standard
+        kappa = sum(abs(wwj.*ffj))/abs(I);
+        kappa = kappa*n;
+        errestv(i) = kappa*eps;
+    elseif errest_alt == 2
+        % condition number of dot product using Euclidean norm
+        kappa = norm(wwj,inf)*norm(ffj,inf)/abs(I);
+        errestv(i) = kappa*eps;
+    elseif errest_alt == 3
+        % as errest_alt==2 but with additional interpolation error
+        kappa = norm(wwj,inf)*norm(ffj,inf)/abs(I);
+        errestv(i) = kappa*eps + interp_err*norm(wwj,inf)/abs(I);
     end
-    % final cancellation error estimate
-    errestv(i) = kappa*eps;
 end
 
 end
@@ -222,7 +258,8 @@ set(groot,'defaultLegendInterpreter','latex');
 
 savefig = 0; % saves figures to folder matlab/images
 
-adj_method = 0; % solve non-shifted using adjoint method
+adj_method_F = [0,0]; % solve using adjoint method for F, [std,mod]
+adj_method_sigma = [0,0]; % solve using adjoint method for sigma
 corr_coeff = 1; % correct first poly coeff by exact value
 use_bjorck_pereyra = 1; % or solve Vandermonde systems using "\"
 errest_alt = 2; % which way to estimate cancellation error
@@ -236,15 +273,15 @@ n = 20; % nodes
 
 % Example 1: m=1,3,5 (power of singularity 1/r^m), vary b, fix delta=1e-8
 [errv1,errshv1,errestv1,c,d,pmat1,pshmat1,irefv1] = bases_comp_flat_panel(...
-    1,sigma,r,delta,a,bv,n,adj_method,use_bjorck_pereyra,corr_coeff,errest_alt);
+    1,sigma,r,delta,a,bv,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,corr_coeff,errest_alt);
 [errv3,errshv3,errestv3,~,~,pmat3,pshmat3,irefv3] = bases_comp_flat_panel(...
-    3,sigma,r,delta,a,bv,n,adj_method,use_bjorck_pereyra,corr_coeff,errest_alt);
+    3,sigma,r,delta,a,bv,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,corr_coeff,errest_alt);
 [errv5,errshv5,errestv5,~,~,pmat5,pshmat5,irefv5] = bases_comp_flat_panel(...
-    5,sigma,r,delta,a,bv,n,adj_method,use_bjorck_pereyra,corr_coeff,errest_alt);
+    5,sigma,r,delta,a,bv,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,corr_coeff,errest_alt);
 
 % Example 2: m=5, don't correct coefficient, vary b, fix delta=1e-8
 [~,errshv5nocorr,~,~,~,~,~,~] = bases_comp_flat_panel(...
-    5,sigma,r,delta,a,bv,n,adj_method,use_bjorck_pereyra,0,errest_alt);
+    5,sigma,r,delta,a,bv,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,0,errest_alt);
 
 % Example 3: m=5, fix b=1e-4, vary delta
 deltav = logspace(-16,0,20);
@@ -252,7 +289,7 @@ ndelta = numel(deltav);
 [errv5delta,errshv5delta,errestv5delta,irefv5delta] = deal(zeros(ndelta,1));
 for i = 1:ndelta
     [errv5delta(i),errshv5delta(i),errestv5delta(i),~,~,~,~,irefv5delta(i)] = bases_comp_flat_panel(...
-        5,sigma,r,deltav(i),a,1e-4,n,adj_method,use_bjorck_pereyra,corr_coeff,errest_alt);
+        5,sigma,r,deltav(i),a,1e-4,n,adj_method_F,adj_method_sigma,use_bjorck_pereyra,corr_coeff,errest_alt);
 end
 
 % prints
