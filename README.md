@@ -1,7 +1,7 @@
 # TSSQ: Translated Singularity Swap Quadrature
- **tssq-matlab** provides a MATLAB implementation of the stablized singularity swap quadrature (SSQ) proposed in *"Stabilizing the singularity swap quadrature for near-singular line integrals"* by D. Krantz, A. H. Barnett and A.-K. Tornberg (arXiv, 2025).
+ **tssq-matlab** provides a MATLAB implementation of the quadrature proposed in the preprint [Stabilizing the singularity swap quadrature for near-singular line integrals](https://arxiv.org/abs/2509.23881) by D. Krantz, A. H. Barnett and A.-K. Tornberg.
 
- Translated SSQ (TSSQ) extends the standard SSQ method with translated bases that avoid catastrophic cancellation and achieve high accuracy for very close evaluation.
+ Translated singularity swap quadrature (TSSQ) extends the standard SSQ method with translated bases that avoid catastrophic cancellation and achieve high accuracy for very close evaluation.
 
 ![TSSQ idea sketch](images/tssq_idea_sketch.png)
 
@@ -60,7 +60,7 @@ return std::is_heap(heap.begin(), heap.end());
         - `matlab/examples-paper/deformed_starfish.m`
         - `matlab/examples-paper/bases_comp_flat_panel.m`
 
-- Comparison of SSQ and TSSQ for close evaluation of the slender-body kernel.
+- Comparison of SSQ and TSSQ for close evaluation of the slender-body kernel with error tolerance $`10^{-6}`$.
 ![SSQ and TSSQ comparison](images/long_filament_err_vs_dist_tol6.png)
 
 ## Main functions
