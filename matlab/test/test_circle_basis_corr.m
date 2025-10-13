@@ -28,7 +28,7 @@ function [errv,errmodv,errestv,c,d,pmat,pmodmat,irefv,kstd,kmod] = test_circle_b
 %                      using "integral" instead of recurrence formulas
 %   use_fft          - boolean, if true, computes modified basis
 %                      coefficients from the standard ones computed via FFT
-%   adj_method       - boolean, if true, solves non-shifted using adjoint method
+%   adj_method       - boolean, if true, solves using adjoint method on sigma
 %
 % OUTPUTS:
 %   errv            - relative absolute error in standard basis evaluation for each b
@@ -50,7 +50,8 @@ a = mod(a,2*pi); % make sure real(t0) in [0,2*pi)
 
 % numerator
 h = @(t) sin(t-a); % function small at t=a
-f = @(t) sigma(t).*(h(t).^alpha+delta); % modified "density", RR^T style vanishing near t=a
+g = @(t) h(t).^alpha+delta;
+f = @(t) sigma(t).*g(t); % modified "density", RR^T style vanishing near t=a
 
 tj = linspace(0,2*pi,n+1).'; tj(end) = []; % nodes in [0,2*pi)
 
@@ -62,6 +63,7 @@ else
 end
 
 fj = f(tj); % samples
+gj = g(tj); % numerator, except layer dens
 sj = sigma(tj); % only layer density function
 
 c = fftshift(fft(fj))/n; % standard Fourier basis coefficients
@@ -74,14 +76,14 @@ else
 end
 
 if use_fft && add_shifted_sine
-    %[a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
-    sjk = fftshift(fft(sj))/n;
-    sigma_interp = real(exp(1i*kstd.'*a)*sjk);
-    a0 = sigma_interp*(h(a)^alpha+delta);
-    a1 = real(exp(1i*kstd'*a)*(1i*kstd.*c));
-    gj = (fj-a0-a1*sin(tj-a))./sin((tj-a)./2).^2;
-    bk = fftshift(fft(gj)/n);
-    b_coeffs = bk(2:end-1);
+    [a0,a1,b_coeffs] = fourier2modcoeffs(c,a); % map c_k --> (a_0,a_1,b_k)
+%     sjk = fftshift(fft(sj))/n;
+%     sigma_interp = real(exp(1i*kstd.'*a)*sjk);
+%     a0 = sigma_interp*(h(a)^alpha+delta);
+%     a1 = real(exp(1i*kstd'*a)*(1i*kstd.*c));
+%     gj = (fj-a0-a1*sin(tj-a))./sin((tj-a)./2).^2;
+%     bk = fftshift(fft(gj)/n);
+%     b_coeffs = bk(2:end-1);
     d = [a0;a1;b_coeffs];
 else
     V = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
@@ -94,12 +96,13 @@ else
 end
 
 % correct first coefficient in modified basis
+ga = g(a);
 if strcmp(corr_coeff,'exact')
     d(1) = f(a);
 elseif strcmp(corr_coeff,'interp')
     sjk = fftshift(fft(sj))/n; % Fourier coefficients of layer dens
-    sigma_interp = real(exp(1i*kstd.'*a)*sjk); % interpolate layer dens at t=a
-    d(1) = sigma_interp*(h(a)^alpha+delta); % eval remaining part of kernel analytically
+    sa = real(exp(1i*kstd.'*a)*sjk); % interpolate layer dens at t=a
+    d(1) = sa*ga; % eval remaining part of kernel analytically
 end
 
 ell = @(r) -(4*r)./(1-r).^2; % function in basis integrals
@@ -200,11 +203,21 @@ for i = 1:M
     end
     pmodmat(:,i) = pmod;
     
+    % standard Fourier basis
     if adj_method
-        % adj method, standard
+        % adj method on F
+%         p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
+%         w = fft(p_shifted)/n; % target specific special quadrature weights
+%         stdv = fj.*w; % vector to be summed
+
+        % adj method on sigma
         p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
-        w = fft(p_shifted)/n; % target specific special quadrature weights
-        stdv = fj.*w; % vector to be summed
+        pp_shifted = p_shifted;
+        pp_shifted(1) = 0;
+        W = fft(pp_shifted)/n;
+        L = W.*gj + gj*pmod(1)/n;
+        stdv = sj.*L;
+        w = L;
     else
         % plain non-adj method, standard
         stdv = c.*p;
@@ -213,8 +226,31 @@ for i = 1:M
     I = real(sum(stdv));
     errv(i) = abs((I-Ie)/Ie);
 
-    % plain non-adj method, modified
-    Imod = real(sum(d(2:end).*pmod(2:end))) + d(1)*p0; % separate cuz vpa
+    % modified Fourier basis
+    if adj_method
+        % adj method on sigma
+        w0 = trig_barycentric_weights(tj,a);
+
+        % Vandermonde matrix approach (slow)
+%         % oscillatory block: n x (n-2), each column is phi_k(tj)
+%         Vosc = sin((tj-a)/2).^l.*exp(1i*kmod.'.*tj); % modified Fourier basis
+%         V = [ones(n,1) sin(tj-a) Vosc]; % add constant function 1 and shifted sine
+%         
+%         % RHS with zeros for the first two rows
+%         rhs  = [0; 0; pmod(3:end)];
+%         
+%         % solve for W
+%         Wmod = V.' \ rhs;
+%         L = Wmod.*gj+g(a)*pmod(1)*w0;
+%         Imod = real(sum(L.*sj));
+
+        % FFT-accelerated approach
+        L = adjoint_modfourier_fft(tj, a, kmod, pmod, gj, ga, w0);
+        Imod = sum(L.*sj);
+    else
+        % plain non-adj method, modified
+        Imod = real(sum(d(3:end).*pmod(3:end))) + d(1)*p0; % separate cuz vpa
+    end
     errmodv(i) = abs((Imod-Ie)/Ie);
 
     % cancellation error estimate
@@ -248,7 +284,7 @@ corr_coeff = 'interp'; % determines how to correct the first modified coeff
 use_vpa = 0; % use vpa for certain calculations
 use_integral = 0; % compute basis integrals using "integral" instead of rec
 use_fft = 1; % compute modified basis coefficients via FFT
-adj_method = 1; % solve non-shifted using adjoint method
+adj_method = 1; % solve non-shifted using adjoint method on sigma
 
 switch test_no
     case 1
@@ -415,49 +451,87 @@ kappa = normw * norm(f,2) / abs(sum(wf));
 est = eps*kappa;
 end
 
-% old function, keep here just in case
-% function mu = new_rec(r,kmax,nph,m)
-% kvec = 0:kmax;
-% M = length(kvec);
-% [K,E] = ellipke(r^2);
-% 
-% % p = 1/2
-% P(1,1) = 2*K;
-% P(2,1) = 2/r*(-E+K);
-% % p = 3/2
-% P(1,2) = 2/(1+r)*(2/(1+r)*E-(1-r)*K);
-% % p = 5/2
-% P(1,3) = 2/(3*(1+r)^4)*(8*(1+r^2)*E-(1-r)*(1+r)*(5+3*r^2)*K);
-% 
-% % Recurrence for p = 1/2
-% for i = 3:M
-%     k = kvec(i);
-%     P(i,1) = (1+r^2)*2*(k-1)/(2*k-1)/r*P(i-1,1) - (2*k-3)/(2*k-1)*P(i-2,1);
-% end
-% 
-% % Recurrence for p = 3/2, 5/2
-% plist = [3/2;5/2];
-% for j = 1:2
-%     ptmp = plist(j);
-%     for i = 2:M
-%         k = kvec(i);
-%         P(i,j+1) = (1+r^2)/2/r*P(i-1,j+1)-(1-r)^2*(ptmp+k-2)/(ptmp-1)/2/r*P(i-1,j);
-%     end
-% end
-% 
-% if m == 3
-%     mu0 = 2.*r.^(-1).*(1+r).^(-2).*((-1).*E+K+K.*r);
-%     muktmp = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*P(2:end,2) + ((m/2+kvec(2:end).'-1)./(2*r).*P(2:end,1)-(m/2+kvec(2:end).'-2)./(1+r^2).*P(1:end-1,1))./(m/2-1));
-% else
-%     mu0 = (-2/3).*((-1)+r).^(-2).*r.^(-1).*(1+r).^(-4).*(E+E.*((-6)+r).*r+K.*((-1)+r.*(3+r+(-3).*r.^2)));
-%     muktmp = 0.5*(1-r)^(3-m) * (-(1-r)^2/(2*r*(1+r^2)).*P(2:end,3) + ((m/2+kvec(2:end).'-1)./(2*r).*P(2:end,2)-(m/2+kvec(2:end).'-2)./(1+r^2).*P(1:end-1,2))./(m/2-1));
-% end
-% 
-% muktmp = [mu0; muktmp];
-% 
-% if kmax ~= nph/2
-%     mu = [conj(muktmp(M:-1:2)); muktmp];
-% else
-%     mu = [conj(muktmp(M:-1:2)); muktmp(1:end-1)];
-% end
-% end
+function L = adjoint_modfourier_fft(tj, a, kmod, pmod, gj, ga, w0)
+% ADJOINT_MODFOURIER_FFT computes adjoint quadrature weights acting on 
+% layer density via FFT-acceleration
+%
+% INPUTS:
+%   tj   - n×1 equispaced nodes in [0,2pi), n even or odd
+%   a    - shift (real)
+%   kmod - column of modified wavenumbers [-n/2+1, ..., n/2-2]
+%   pmod - [p0; p1; Stilde_k for k in kmod] (p1 should be 0)
+%   gj   - kernel numerator without layer dens sigma
+%   ga   - scalar g(a)
+%   w0   - n×1 trig-barycentric weights evaluating sigma(a)
+%
+% OUTPUTS:
+%   L    - n×1 adjoint quadrature weights acting on layer density sigma
+
+n = numel(tj);
+
+% exponentials
+ea = exp(1i*a);
+eam = conj(ea);
+
+% build RHS b (nx1) in the order: row1=const, row2=sin, then rows over kmod
+b = [0;0;pmod(3:end)];
+
+% determine index of mode k=0
+if mod(n,2) == 0
+    ind0 = n/2+1; % wavenumbers = -N/2 : N/2 - 1
+else
+    ind0 = (n-1)/2+1; % wavenumbers = -(N-1)/2 : (N-1)/2
+end
+
+% allocate triplet arrays with enough room
+nnz_est = 3*(n-2) + 3; % 3 bands for (n-2) rows + 2 constraint rows
+I = zeros(nnz_est,1);
+J = zeros(nnz_est,1);
+V = zeros(nnz_est,1);
+
+% row 1: constant mode  ( What_0 = 0 )
+I(1) = 1; J(1) = ind0; V(1) = 1;
+
+% row 2: sine mode ( (e^{-ia}/2i) What_{+1} - (e^{ia}/2i) What_{-1} = 0 )
+I(2:3) = 2;
+J(2) = ind0+1; V(2) = eam;
+J(3) = ind0-1; V(3) = -ea;
+
+% rows 3, ..., n: oscillatory block
+M = numel(kmod);
+R = 3 + (0:M-1).'; % row numbers 3, ...,n
+K = kmod(:).';
+
+% per-row interleaving of columns: [k-1, k, k+1] for each row
+J_block = [K-1; K; K+1] + ind0;
+
+% matching row indices: [R; R; R] then vectorize column-major -->
+% R(1),R(1),R(1), R(2),R(2),R(2),...
+I_block = repelem(R,3);
+
+% matching values per row: [-0.25 e^{ia}, 0.5, -0.25 e^{-ia}]
+V_row = [-0.25*ea, 0.50, -0.25*eam];
+V_block = repmat(V_row, 1, M).';
+
+% place blocks
+I(4:3+3*M) = I_block;
+J(4:3+3*M) = J_block;
+V(4:3+3*M) = V_block;
+
+% assemble sparse matrix
+A_s = sparse(I,J,V,n,n);
+
+% solve in Fourier space for What (fftshift order)
+What_shift = A_s \ b;
+% [L,U,P,Q] = lu(A_s);
+% What_shift = Q*(U\(L\(P*b)));
+
+% recover node weights (inverse of What_k = \sum_j W_j e^{+ik t_j})
+F = ifftshift(What_shift);
+W = ifft(conj(F),'symmetric'); % slightly faster than line below
+%W = real(fft(F)/n);
+
+% final quadrature weights acting on layer density sigma
+p0 = pmod(1);
+L = gj(:).*W(:) + ga * p0 * w0(:);
+end
