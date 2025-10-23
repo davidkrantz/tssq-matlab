@@ -48,6 +48,7 @@ opts_ref.nquad = opts.nquad+2;
 
 % Loop over tolerances
 [adapquad_err_data,ssq_err_data,tssq_err_data] = deal(zeros(numel(distv),numel(tolv),3));
+stats_ssq = cell(numel(tolv),1);
 stats_tssq = cell(numel(tolv),1);
 for ii = 1:numel(tolv)
     opts.tol = tolv(ii);
@@ -60,7 +61,8 @@ for ii = 1:numel(tolv)
     % Standard SSQ
     disp(' ')
     disp('* SSQ')
-    [ussq1,ussq2,ussq3] = ssq_sbt(curve,density,targets,opts);
+    [ussq1,ussq2,ussq3,stats_ssq_tmp] = ssq_sbt(curve,density,targets,opts);
+    stats_ssq{ii} = stats_ssq_tmp;
 
     % Translated SSQ (TSSQ)
     disp(' ')
@@ -87,20 +89,33 @@ for ii = 1:numel(tolv)
     end
 end
 
+% SSQ timings
+[kerevals_near,nbr_std_pts,nbr_mod_pts,time_weights,time_near,time_far,time_rootfinding,nbr_pts_per_sec] = deal(zeros(numel(tolv),1));
+for ii = 1:numel(tolv)
+    kerevals_near(ii) = stats_ssq{ii}.kerevals_near;
+    time_rootfinding(ii) = stats_ssq{ii}.time_rootfinding;
+    nbr_std_pts(ii) = stats_ssq{ii}.nbr_std_pts;
+    nbr_mod_pts(ii) = stats_ssq{ii}.nbr_mod_pts;
+    nbr_pts_per_sec(ii) = stats_ssq{ii}.nbr_std_pts/stats_ssq{ii}.time_weights;
+    time_weights(ii) = stats_ssq{ii}.time_weights;
+    time_near(ii) = stats_ssq{ii}.time_near;
+    time_far(ii) = stats_ssq{ii}.time_far;
+end
+ssq_timings = table(tolv,kerevals_near,nbr_std_pts,nbr_mod_pts,time_weights,nbr_pts_per_sec,time_rootfinding,time_near,time_far)
+
 % TSSQ timings
-[kerevals_near,time_std_weights,time_ker_near,time_mod_weights,time_cancel_est,time_mod_vander_solve,time_mod_sigma_interp_a,time_mod_kernel_eval_a,time_mod_basis_int] = deal(zeros(numel(tolv),1));
+[kerevals_near,nbr_std_pts,nbr_mod_pts,time_weights,time_near,time_far,time_rootfinding,nbr_pts_per_sec] = deal(zeros(numel(tolv),1));
 for ii = 1:numel(tolv)
     kerevals_near(ii) = stats_tssq{ii}.kerevals_near;
-    time_std_weights(ii) = stats_tssq{ii}.time_std_weights;
-    time_ker_near(ii) = stats_tssq{ii}.time_ker_near;
-    time_mod_weights(ii) = stats_tssq{ii}.time_mod_weights;
-    time_cancel_est(ii) = stats_tssq{ii}.time_cancel_est;
-    time_mod_basis_int(ii) = stats_tssq{ii}.time_mod_basis_int;
-    time_mod_vander_solve(ii) = stats_tssq{ii}.time_mod_vander_solve;
-    time_mod_sigma_interp_a(ii) = stats_tssq{ii}.time_mod_sigma_interp_a;
-    time_mod_kernel_eval_a(ii) = stats_tssq{ii}.time_mod_kernel_eval_a;
+    time_rootfinding(ii) = stats_tssq{ii}.time_rootfinding;
+    nbr_std_pts(ii) = stats_tssq{ii}.nbr_std_pts;
+    nbr_mod_pts(ii) = stats_tssq{ii}.nbr_mod_pts;
+    nbr_pts_per_sec(ii) = stats_ssq{ii}.nbr_std_pts/stats_tssq{ii}.time_weights;
+    time_weights(ii) = stats_tssq{ii}.time_weights;
+    time_near(ii) = stats_tssq{ii}.time_near;
+    time_far(ii) = stats_tssq{ii}.time_far;
 end
-table(tolv,kerevals_near,time_std_weights,time_mod_weights,time_cancel_est,time_ker_near,time_mod_basis_int,time_mod_vander_solve,time_mod_sigma_interp_a,time_mod_kernel_eval_a)
+tssq_timings = table(tolv,kerevals_near,nbr_std_pts,nbr_mod_pts,time_weights,nbr_pts_per_sec,time_rootfinding,time_near,time_far)
 
 % Plots (hardcoded for paper example)
 close all;
@@ -194,6 +209,7 @@ close(2);
 alignfigs;
 
 if savefig
+    if ~exist('figs', 'dir'); mkdir('figs'); end
     disp('saving figures...');
     exportgraphics(figure(3),'figs/long_filament.pdf','Resolution',400);
     exportgraphics(figure(4),'figs/long_filament_err_vs_dist_tol4.pdf','Resolution',400);

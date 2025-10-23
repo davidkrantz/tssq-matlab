@@ -1,7 +1,8 @@
-function [mu1,mu3,mu5] = periodic_basis_integrals(r,kmax,n,K,E,zero_order)
-% PERIODIC_BASIS_INTEGRALS compute integrals mu of periodic basis functions
+function [mu1,mu3,mu5] = rsqrt_pow_integrals_fourier(r,kmax,n,K,E,zero_order)
+% RSQRT_POW_INTEGRALS_FOURIER compute integrals mu of periodic basis 
+%   functions
 %
-% [mu1 mu3,mu5] = PERIODIC_BASIS_INTEGRALS(r,kmax,n,K,E)
+% [mu1 mu3,mu5] = rsqrt_pow_integrals_fourier(r,kmax,n,K,E)
 %   returns vectors of basis integrals of periodic basis functions with 
 %   singularities of order p = 1/2, 3/2, 5/2, constructed via recurrence
 %   relations

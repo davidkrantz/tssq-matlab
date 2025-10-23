@@ -59,16 +59,16 @@ disp('* Adaptive quadrature')
 % Standard SSQ
 disp(' ')
 disp('* SSQ')
-[ussq1,ussq2,ussq3] = ssq_sbt(curve,density,targets,opts);
+[ussq1,ussq2,ussq3,stats_ssq] = ssq_sbt(curve,density,targets,opts);
 
-% Translated SSQ (TSSQ), correct both I_3 and I_5
+% TSSQ, correct both I_3 and I_5
 disp(' ')
 disp('* TSSQ')
 [utssq1,utssq2,utssq3,stats_tssq] = tssq_sbt(curve,density,targets,opts);
 
 % TSSQ, correct only I_5
 disp(' ')
-disp('* TSSQ')
+disp('* TSSQ: correct only I_5')
 opts.corrR3 = false;
 [utssq1_R5,utssq2_R5,utssq3_R5] = tssq_sbt(curve,density,targets,opts);
 
@@ -94,7 +94,11 @@ for i = 1:numel(distv)
     tssq_err_R5_data(i,3) = max(specquadsh_errmax_R5);
 end
 
+% Print stats
+stats_ssq
 stats_tssq
+nbr_pts_per_sec_ssq = stats_ssq.nbr_std_pts/stats_ssq.time_weights
+nbr_pts_per_sec_tssq = stats_ssq.nbr_std_pts/stats_tssq.time_weights
 
 % Plots
 close all;
@@ -170,6 +174,7 @@ close(2);
 alignfigs;
 
 if savefig
+    if ~exist('figs', 'dir'); mkdir('figs'); end
     disp('saving figures...');
     exportgraphics(figure(3),'figs/deformed_starfish.pdf','Resolution',400);
     exportgraphics(figure(4),'figs/deformed_starfish_err_vs_dist_corrI3_corrI5.pdf','Resolution',400);

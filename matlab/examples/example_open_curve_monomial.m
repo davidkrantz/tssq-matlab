@@ -13,7 +13,7 @@ opts.tol = 1e-4; % desired tolerance
 opts.slender_eps = 0; % only Stokeslet: S(r) = I/|r| + (r r^T)/|r|^3
 
 % Curve: parabolic arc: gamma(t) = (t, a*t^2, 0), t in [-1,1]
-a = 0.5;
+a = 0.9;
 s_of_t = @(t) -1 + 2*t; % map [0,1] -> [-1,1]
 curve.x  = @(t) s_of_t(t.');
 curve.y  = @(t) a * (s_of_t(t.')).^2;
@@ -32,11 +32,9 @@ density.f3 = @(t) 0*t.';
 Nt = 50; % number of targets
 tline = 0.3; % where on curve [0,1] the normal starts
 p = [curve.x(tline); curve.y(tline); curve.z(tline)]; % point on curve
-tx = curve.xp(tline); ty = curve.yp(tline); tz = curve.zp(tline);
-tvec = [tx; ty; tz]; tunit = tvec/norm(tvec); % unit tangent vector
-nvec = [-tunit(2); tunit(1); 0];
-nunit = nvec/norm(nvec);
-distv = logspace(-8,-1,Nt); % distances along the line
+nvec = [1;1;1];
+nunit = nvec/norm(nvec); % unit normal vector
+distv = logspace(-8,0,Nt); % distances along the line
 targets = p + nunit .* distv; % 3 x Nt
 
 % Reference: adaptive quadrature
@@ -47,11 +45,11 @@ u1_ref = adaptive_quadrature_wrapper(curve,density,targets,opts_ref);
 
 % SSQ
 disp(' '); disp('* SSQ');
-[u1_ssq,~,~,stats_ssq] = ssq_sbt(curve,density,targets,opts);
+u1_ssq = ssq_sbt(curve,density,targets,opts);
 
 % TSSQ
 disp(' '); disp('* TSSQ');
-[u1_tssq,~,~,stats_tssq] = tssq_sbt(curve,density,targets,opts);
+u1_tssq = tssq_sbt(curve,density,targets,opts);
 
 % Relative error
 err_ssq = abs(u1_ref-u1_ssq)./norm(u1_ref,inf);
@@ -74,6 +72,7 @@ loglog(distv,err_tssq,'x-');
 yline(opts.tol,'k','tolerance');
 xlabel('Distance to curve'); ylabel('Relative error');
 xlim([min(distv),max(distv)]);
-grid on; legend('SSQ','TSSQ');
+grid on; legend('SSQ','TSSQ','Location','southwest');
+title('Error vs distance (Monomial basis)');
 
 alignfigs;

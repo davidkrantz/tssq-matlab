@@ -145,7 +145,7 @@ for i = 1:M
         p = 2*exp(1i*kstd*a).*muk./(1-r).^m; % scale from rewriting og int
     else
         kmaxstd = max(abs(kstd));
-        [mu1k,mu3k,mu5k] = periodic_basis_integrals(r,kmaxstd,n,K,E); % recurrences
+        [mu1k,mu3k,mu5k] = rsqrt_pow_integrals_fourier(r,kmaxstd,n,K,E); % recurrences
         if m == 3
             muk = mu3k;
         else
@@ -206,18 +206,18 @@ for i = 1:M
     % standard Fourier basis
     if adj_method
         % adj method on F
-%         p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
-%         w = fft(p_shifted)/n; % target specific special quadrature weights
-%         stdv = fj.*w; % vector to be summed
+        p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
+        w = fft(p_shifted)/n; % target specific special quadrature weights
+        stdv = fj.*w; % vector to be summed
 
         % adj method on sigma
-        p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
-        pp_shifted = p_shifted;
-        pp_shifted(1) = 0;
-        W = fft(pp_shifted)/n;
-        L = W.*gj + gj*pmod(1)/n;
-        stdv = sj.*L;
-        w = L;
+%         p_shifted = ifftshift(double(p)); % shifts from 0-freq-idx to Matlab std
+%         pp_shifted = p_shifted;
+%         pp_shifted(1) = 0;
+%         W = fft(pp_shifted)/n;
+%         L = W.*gj + gj*pmod(1)/n;
+%         stdv = sj.*L;
+%         w = L;
     else
         % plain non-adj method, standard
         stdv = c.*p;
@@ -466,6 +466,8 @@ function L = adjoint_modfourier_fft(tj, a, kmod, pmod, gj, ga, w0)
 %
 % OUTPUTS:
 %   L    - n×1 adjoint quadrature weights acting on layer density sigma
+%
+% NOTE: This function is replaced by adjoint_modified_fourier.m
 
 n = numel(tj);
 

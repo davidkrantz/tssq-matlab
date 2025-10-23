@@ -71,7 +71,7 @@ Core entry points for users are:
   Standard SSQ for the slender-body kernel.
 
 - **`tssq_sbt(curve,density,targets,opts)`**  
-  Translated SSQ (TSSQ) for the slender-body kernel. Automatically switches to modified bases when catastrophic cancellation is detected.
+  Translated SSQ (TSSQ) for the slender-body kernel. Automatically switches between standard and modified bases.
 
 
 ## Supporting routines
@@ -86,24 +86,30 @@ These are lower-level routines used internally by SSQ/TSSQ, but may be useful fo
 - **Translated basis integrals**:  
   `matlab/src/recursions/rsqrt_pow_integrals_shift.m`
 
-- **SSQ weights (standard)**:  
+- **SSQ weights**:  
   `external/linequad/matlab/src/line3_near_weights.m`
 
-- **Quadrature driver (monomial)**:  
+- **TSSQ weights**:  
+  matlab/src/near_weights_monomial.m`
+
+- **Quadrature driver**:  
   `matlab/src/interpolatory_quadrature_monomial.m`
 
 ### Fourier (closed curves)
 
 - **Standard basis integrals**:  
-  `matlab/src/recursions/periodic_basis_integrals.m`
+  `matlab/src/recursions/rsqrt_pow_integrals_fourier.m`
 
-- **SSQ weights (standard)**:  
-  `matlab/src/closed_curve_near_weights.m`
+- **TSSQ weights**:  
+  `matlab/src/near_weights_fourier.m`
+
+- **Adjoint helper for modified Fourier basis**:  
+  `matlab/src/adjoint_modified_fourier.m`
 
 - **Modified Fourier coefficients**:  
   `matlab/src/fourier2modcoeffs.m`
 
-- **Quadrature driver (Fourier)**:  
+- **Quadrature driver**:  
   `matlab/src/interpolatory_quadrature_fourier.m`
 
 ## Code structure

@@ -1,5 +1,5 @@
-function [w1,w3,w5,mu1,mu3,mu5] = rsqrt_pow_weights_periodic(tj,kmax,troot)
-% RSQRT_POW_WEIGHTS_PERIODIC computes near evaluation quadrature weights
+function [w1,w3,w5,mu1,mu3,mu5] = rsqrt_pow_weights_fourier(tj,kmax,troot)
+% RSQRT_POW_WEIGHTS_FOURIER computes near evaluation quadrature weights
 % for kernel 1/R^m, m=1,3,5.
 %
 % [w1,w3,w5,mu1,mu3,mu5] = rsqrt_pow_weights_periodic(tj,k,troot) returns 
@@ -28,7 +28,7 @@ r = exp(-abs(b)); % 0<r<1
 
 % compute basis integrals for non-negative wavenumbers (0:kmax) through
 % recurrences
-[mu1pos,mu3pos,mu5pos] = periodic_basis_integrals(r,kmax,n,K,E,false);
+[mu1pos,mu3pos,mu5pos] = rsqrt_pow_integrals_fourier(r,kmax,n,K,E,false);
 
 % precompute flipped conjugate sections
 mu1flip = conj(mu1pos(end:-1:2));
@@ -37,23 +37,26 @@ mu5flip = conj(mu5pos(end:-1:2));
 
 % decide index structure and handle symmetry
 if mod(n,2) == 0
-    mu1 = [mu1flip; mu1pos(1:end-1)];
-    mu3 = [mu3flip; mu3pos(1:end-1)];
-    mu5 = [mu5flip; mu5pos(1:end-1)];
-
     kstdord = [0:kmax-1, -kmax:-1]'; % standard Matlab orderings
     mu1stdord = [mu1pos(1:end-1); mu1flip];
     mu3stdord = [mu3pos(1:end-1); mu3flip];
     mu5stdord = [mu5pos(1:end-1); mu5flip];
 else
-    mu1 = [mu1flip; mu1pos];
-    mu3 = [mu3flip; mu3pos];
-    mu5 = [mu5flip; mu5pos];
-
     kstdord = [0:kmax, -kmax:-1]';
     mu1stdord = [mu1pos; mu1flip];
     mu3stdord = [mu3pos; mu3flip];
     mu5stdord = [mu5pos; mu5flip];
+end
+if nargout > 3
+    if mod(n,2) == 0
+        mu1 = [mu1flip; mu1pos(1:end-1)];
+        mu3 = [mu3flip; mu3pos(1:end-1)];
+        mu5 = [mu5flip; mu5pos(1:end-1)];
+    else
+        mu1 = [mu1flip; mu1pos];
+        mu3 = [mu3flip; mu3pos];
+        mu5 = [mu5flip; mu5pos];
+    end
 end
 
 % compute near evaluation quadrature weights

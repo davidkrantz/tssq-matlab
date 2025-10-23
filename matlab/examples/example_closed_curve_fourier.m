@@ -9,7 +9,7 @@ clear; close all; clc; rng(0);
 
 % Options
 opts = default_options('fourier');
-opts.tol = 1e-4; % desired tolerance
+opts.tol = 1e-6; % desired tolerance
 opts.slender_eps = 0; % only Stokeslet: S(r) = I/|r| + (r r^T)/|r|^3
 
 % Curve: closed circle gamma(t) = (cos(2*pi*t), sin(2*pi*t), 0), t in [0,1)
@@ -21,7 +21,7 @@ curve_ref.yp = @(t) 2*pi*cos(2*pi*t.');
 curve_ref.zp = @(t) 0*t.';
 curve_ref.s  = @(t) sqrt(curve_ref.xp(t).^2 + curve_ref.yp(t).^2 + ...
     curve_ref.zp(t).^2);
-% current Fourier implementation of SSQ/TSSQ requires t in [0,2*pi)
+% Current Fourier implementation of SSQ/TSSQ requires t in [0,2*pi)
 curve.x  = @(t) cos(t.');
 curve.y  = @(t) sin(t.');
 curve.z  = @(t) 0*t.';
@@ -42,8 +42,9 @@ density.f3 = @(t) 0*t.';
 Nt = 50; % number of targets
 tline = 11*pi/3; % parameter location for anchor point
 p = [curve.x(tline); curve.y(tline); curve.z(tline)]; % point on curve
-nunit = [1;0;1];  % outward at (1,0,1)
-distv = logspace(-8,-1,Nt); % distances along the line
+nvec = [1;0;1];
+nunit = nvec/norm(nvec); % unit normal vector
+distv = logspace(-8,0,Nt); % distances along the line
 targets = p + nunit .* distv; % 3 x Nt
 
 % Reference: adaptive quadrature (panel-based, high accuracy)
@@ -55,11 +56,11 @@ u1_ref = adaptive_quadrature_wrapper(curve_ref,density_ref,targets, ...
 
 % SSQ
 disp(' '); disp('* SSQ');
-[u1_ssq,~,~,stats_ssq] = ssq_sbt(curve,density,targets,opts);
+u1_ssq = ssq_sbt(curve,density,targets,opts);
 
 % TSSQ
 disp(' '); disp('* TSSQ');
-[u1_tssq,~,~,stats_tssq] = tssq_sbt(curve,density,targets,opts);
+u1_tssq = tssq_sbt(curve,density,targets,opts);
 
 % Relative error (normalized by reference infinity norm)
 err_ssq  = abs(u1_ref - u1_ssq)  ./ norm(u1_ref,inf);
@@ -82,7 +83,7 @@ loglog(distv, err_tssq, 'x-');
 yline(opts.tol,'k','tolerance');
 xlabel('Distance to curve'); ylabel('Relative error');
 xlim([min(distv),max(distv)]);
-grid on; legend('SSQ','TSSQ','tolerance');
+grid on; legend('SSQ','TSSQ','Location','southwest');
 title('Error vs distance (Fourier basis)');
 
 alignfigs;
