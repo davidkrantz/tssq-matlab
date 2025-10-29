@@ -13,16 +13,10 @@ function [I1, I3, I5] = rsqrt_pow_integrals_shift(z,N,varargin)
 % https://github.com/ludvigak/linequad/blob/master/matlab/src/recursions/rsqrt_pow_integrals_shift.m
 
 if nargin == 3
-    NO_HP_SWITCH = varargin{1}; % disables half plane switch for I1(1)
-    use_vpa = 'none';
-elseif nargin == 4
-    NO_HP_SWITCH = varargin{1};
-    use_vpa = varargin{2};
+    use_vpa = varargin{1};
 elseif isa(z, 'sym')
-    NO_HP_SWITCH = true;
     use_vpa = 'all';
 else
-    NO_HP_SWITCH = false;
     use_vpa = 'none';
 end
 
@@ -32,7 +26,6 @@ NO_POWER_SERIES = false;
 % Disable all tricks if called with VPA argument
 if isa(z, 'sym')
     NO_POWER_SERIES = true;
-    NO_HP_SWITCH = true;
 end
 
 % make sure we are not using vpa
@@ -50,26 +43,7 @@ u2 = sqrt(t2^2 + b^2);
 
 % Compute I1
 I1 = zeros(N,1);
-if NO_HP_SWITCH
-    % Vanilla expression
-    I1(1) = log(1-a+u2)-log(-1-a+u1);    
-else    
-    % Evaluate after substitution zr -> -|zr|
-    arg2 = 1+abs(a) + sqrt((1+abs(a))^2 + b^2);          
-    in_rhomb = 4*abs(b) < 1-abs(a);    
-    if ~in_rhomb || NO_POWER_SERIES
-        arg1 = -1+abs(a) + sqrt((-1+abs(a))^2 + b^2);        
-    else
-        % Series evaluation needed inside 
-        % rhombus [-1, i/4, 1, -i/4, -1].
-        % Here arg1 has cancellation due to structure
-        % -x + sqrt(x^2+b^2)
-        Ns = 11;
-        coeffs = coeffs_I1(Ns);
-        arg1 = (1-abs(a))*eval_series(coeffs, 1-abs(a), b, Ns);    
-    end   
-    I1(1) = log(arg2)-log(arg1);
-end
+I1(1) = asinh(t2/abs(b)) + asinh(-t1/abs(b));
 
 % compute only I1(1) in quadruple precision
 if isa(z, 'sym') && strcmp(use_vpa,'init')

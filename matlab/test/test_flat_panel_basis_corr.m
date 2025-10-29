@@ -1,5 +1,5 @@
 function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_corr(...
-    m,sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,adj_method,corr_coeff_exact,corr_coeff_interp_sig,...
+    m,sigma,r,delta,a,bv,n,use_vpa,adj_method,corr_coeff_exact,corr_coeff_interp_sig,...
     solve_nonshifted,solve_shifted,use_bjorck_pereyra,errest_alt)
 % TEST_FLAT_PANEL_BASIS_CORR compares non-shifted and shifted monomial
 %   basis functions to compute
@@ -23,7 +23,6 @@ function [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_cor
 %   bv                    - vector of imaginary parts of singularities t0 = a + ib
 %   n                     - number of Gauss-Legendre nodes (basis function order)
 %   use_vpa               - string, 'none'/'all'/'init' indicating whether to use vpa to compute basis integrals Pkm and Qkm
-%   no_hp_switch          - boolean, switch to disable half plane switch for I1(1)
 %   adj_method            - if true, solves non-shifted using adjoint method
 %   corr_coeff_exact      - if true, correct first basis coeff in shifted case with exact f(a)
 %   corr_coeff_interp_sig - if true, correct first coeff using interpolated sigma(a)
@@ -150,10 +149,10 @@ for i = 1:M
     % basis integrals
     if strcmp(use_vpa,'none')
         [p1, p3, p5] = rsqrt_pow_integrals(t0, n); % recurrences
-        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0, n, no_hp_switch); % w shift
+        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(t0, n); % w shift
     else
         [p1, p3, p5] = rsqrt_pow_integrals(vpa(t0), n); % use vpa for all terms
-        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(vpa(t0), n, no_hp_switch, use_vpa);
+        [p1sh, p3sh, p5sh] = rsqrt_pow_integrals_shift(vpa(t0), n, use_vpa);
     end
     if m == 1
         p = p1;
@@ -254,7 +253,6 @@ savefig = 0; % saves figures to folder matlab/images
 
 m = 3; % power of singularity 1/r^m
 use_vpa = 'none'; % compute recurrences using vpa in digits(32)
-no_hp_switch = 0; % disables half plane switch for I1(1)
 adj_method = 1; % solve non-shifted using adjoint method
 corr_coeff_exact = 0; % correct first poly coeff by exact value
 corr_coeff_interp_sig = 1; % correct using interp of layer dens
@@ -284,7 +282,7 @@ end
 
 % run test
 [errv,errshv,errestv,c,d,pmat,pshmat,irefv] = test_flat_panel_basis_corr(...
-    m,sigma,r,delta,a,bv,n,use_vpa,no_hp_switch,adj_method,...
+    m,sigma,r,delta,a,bv,n,use_vpa,adj_method,...
     corr_coeff_exact,corr_coeff_interp_sig,solve_nonshifted,...
     solve_shifted,use_bjorck_pereyra,errest_alt);
 
@@ -312,7 +310,7 @@ grid on;
 legend('non-shifted','shifted',['errest (type=' num2str(errest_alt) ')'],'$O(1/b^2)$','interpreter','latex');
 xlabel('b');
 ylabel('rel err');
-title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa ', fix $Q_1^1$=' num2str(~no_hp_switch), ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)],'interpreter','latex');
+title(['m=' num2str(m) ', ns adj=' num2str(adj_method) ', vpa=' use_vpa, ', corrcoeff=' num2str(corr_coeff_interp_sig) ', delta=' num2str(delta)],'interpreter','latex');
 
 figure;
 loglog(abs(bv),vecnorm(c.*pmat,inf,1),'.');
@@ -402,7 +400,7 @@ alignfigs;
 
 if savefig
     disp('saving figures...');
-    exportgraphics(figure(1),['matlab/images/err_m' num2str(m) '_vpa_' use_vpa '_fix_init' num2str(~no_hp_switch) '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '_erresttype' num2str(errest_alt) '.pdf'],'Resolution',400);
+    exportgraphics(figure(1),['matlab/images/err_m' num2str(m) '_vpa_' use_vpa '_corrcoeff' num2str(corr_coeff_interp_sig) '_delta' num2str(delta) '_a' num2str(a) '_erresttype' num2str(errest_alt) '.pdf'],'Resolution',400);
     exportgraphics(figure(2),['matlab/images/ivalref_m' num2str(m) '_delta' num2str(delta) '_a' num2str(a) '.pdf'],'Resolution',400);
     exportgraphics(figure(3),['matlab/images/interval_tarpts_a' num2str(a), '.pdf'],'Resolution',400);
     exportgraphics(figure(4),['matlab/images/numerator_delta' num2str(delta) '_a' num2str(a), '.pdf'],'Resolution',400);
