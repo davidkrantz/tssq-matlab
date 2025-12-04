@@ -26,7 +26,7 @@ switch lower(basis)
         opts.rho         = 3;
         opts.upsample    = true;
         opts.slender_eps = 1e-3;
-        opts.acrit       = 1.05;
+        opts.acrit       = 1;
         opts.bcrit       = 1e-2;
         opts.use_mod     = true;
         opts.basis       = 'monomial';
@@ -37,7 +37,7 @@ switch lower(basis)
         opts.nquad       = 16; % for adaptive quadrature reference
         opts.slender_eps = 1e-3;
         opts.use_mod     = true;
-        opts.bcrit       = 1e-2;
+        opts.bcrit       = 1e300;
         opts.corrR3      = true;
         opts.corrR5      = true;
         opts.basis       = 'fourier';

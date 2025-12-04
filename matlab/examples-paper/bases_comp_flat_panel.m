@@ -356,7 +356,7 @@ loglog(abs(bv),abs(irefv5),'Color',tmpcol(3,:),'Marker','+','LineStyle','none','
 loglog(abs(bv),1./abs(bv).^2,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
 loglog(abs(bv),1./abs(bv).^4,'Color','k','Marker','none','LineStyle','--','LineWidth',LW,'MarkerSize',MS);
 grid on;
-legend('$\|\mathbf{c}\odot\mathbf{P}_m\|_{\infty}$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}_m\|_{\infty}$','$|I_m|$','fontsize',FS,'interpreter','latex');
+legend('$\|\mathbf{c}\odot\mathbf{P}^m\|_{\infty}$','$\|\mathbf{d}\odot\widetilde{\mathbf{P}}^m\|_{\infty}$','$|I_m|$','fontsize',FS,'interpreter','latex');
 xlabel('Distance to $\Gamma$, $b$','fontsize',FS,'interpreter','latex');
 ylabel('Value','fontsize',FS,'interpreter','latex');
 xticks([1e-5 1e-4 1e-3 1e-2 1e-1 1e-0]);
