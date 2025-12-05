@@ -2,11 +2,11 @@
 [submodule "external/chebfun"]
 	path = external/chebfun
 	url = https://github.com/chebfun/chebfun.git
-[submodule "external/linequad"]
-	path = external/linequad
-	url = https://github.com/davidkrantz/linequad.git
-	branch = master
 [submodule "external/kdtree"]
 	path = external/kdtree
 	url = https://github.com/taiya/kdtree
+	branch = master
+[submodule "external/linequad"]
+	path = external/linequad
+	url = https://github.com/ludvigak/linequad.git
 	branch = master

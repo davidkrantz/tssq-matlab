@@ -9,8 +9,8 @@
 
  This repository builds on two external packages:
 
- - **[davidkrantz/linequad](https://github.com/davidkrantz/linequad)**  
-  Fork of the original SSQ code ([ludvigak/linequad](https://github.com/ludvigak/linequad)) containing core quadrature routines.
+ - **[ludvigak/linequad](https://github.com/ludvigak/linequad)**  
+  Original SSQ code containing core quadrature routines.
  - **[taiya/kdtree](https://github.com/taiya/kdtree)**  
   Minimalist kd-tree implementation for neighbor searches.
 
@@ -61,6 +61,7 @@ return std::is_heap(heap.begin(), heap.end());
         - `matlab/examples-paper/bases_comp_flat_panel.m`
 
 - Comparison of SSQ and TSSQ for close evaluation of the slender-body kernel with error tolerance $`10^{-6}`$.
+
 ![SSQ and TSSQ comparison](images/long_filament_err_vs_dist_tol6.png)
 
 ## Main functions
