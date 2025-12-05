@@ -90,7 +90,7 @@ These are lower-level routines used internally by SSQ/TSSQ, but may be useful fo
   `external/linequad/matlab/src/line3_near_weights.m`
 
 - **TSSQ weights**:  
-  matlab/src/near_weights_monomial.m`
+  `matlab/src/near_weights_monomial.m`
 
 - **Quadrature driver**:  
   `matlab/src/interpolatory_quadrature_monomial.m`
