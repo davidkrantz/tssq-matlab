@@ -1,4 +1,7 @@
 # TSSQ: Translated Singularity Swap Quadrature
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17962660.svg)](https://doi.org/10.5281/zenodo.17962660)
+
  **tssq-matlab** provides a MATLAB implementation of the quadrature proposed in the preprint [Stabilizing the singularity swap quadrature for near-singular line integrals](https://arxiv.org/abs/2509.23881) by D. Krantz, A. H. Barnett and A.-K. Tornberg.
 
  Translated singularity swap quadrature (TSSQ) extends the standard SSQ method with translated bases that avoid catastrophic cancellation and achieve high accuracy for very close evaluation.
